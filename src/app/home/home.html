@@ -1,0 +1,80 @@
+<div class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-12 col-sm-10 col-md-7 col-lg-5">
+
+      <h1 class="text-center mb-4 fw-bold">Planning Poker</h1>
+
+      <!-- Tab nav -->
+      <ul class="nav nav-pills nav-fill mb-4">
+        <li class="nav-item">
+          <button class="nav-link w-100" [class.active]="tab() === 'create'" (click)="tab.set('create')">
+            Create Session
+          </button>
+        </li>
+        <li class="nav-item">
+          <button class="nav-link w-100" [class.active]="tab() === 'join'" (click)="tab.set('join')">
+            Join Session
+          </button>
+        </li>
+      </ul>
+
+      @if (error()) {
+        <div class="alert alert-danger" role="alert">{{ error() }}</div>
+      }
+
+      <!-- Create form -->
+      @if (tab() === 'create') {
+        <form (ngSubmit)="createSession()">
+          <div class="mb-3">
+            <label for="sessionName" class="form-label">Session name</label>
+            <input id="sessionName" type="text" class="form-control" [(ngModel)]="sessionName"
+              name="sessionName" placeholder="Sprint 42 Planning" required maxlength="100" />
+          </div>
+          <div class="mb-3">
+            <label for="createDisplayName" class="form-label">Your name</label>
+            <input id="createDisplayName" type="text" class="form-control" [(ngModel)]="createDisplayName"
+              name="createDisplayName" placeholder="Alice" required maxlength="100" />
+          </div>
+          <div class="mb-4">
+            <label for="scale" class="form-label">Voting scale</label>
+            <select id="scale" class="form-select" [(ngModel)]="selectedScale" name="scale">
+              <option value="fibonacci">Fibonacci (1 2 3 5 8 13 21 …)</option>
+              <option value="tshirt">T-Shirt Sizes (XS S M L XL XXL)</option>
+            </select>
+          </div>
+          <button type="submit" class="btn btn-primary w-100"
+            [disabled]="!sessionName.trim() || !createDisplayName.trim()">
+            Create Session
+          </button>
+        </form>
+      }
+
+      <!-- Join form -->
+      @if (tab() === 'join') {
+        <form (ngSubmit)="joinSession()">
+          <div class="mb-3">
+            <label for="sessionCode" class="form-label">Session code</label>
+            <input id="sessionCode" type="text" class="form-control text-center fs-4 fw-bold letter-spacing"
+              [(ngModel)]="sessionCode" name="sessionCode" placeholder="000000"
+              maxlength="6" pattern="[0-9]{6}" inputmode="numeric" required />
+          </div>
+          <div class="mb-3">
+            <label for="joinDisplayName" class="form-label">Your name</label>
+            <input id="joinDisplayName" type="text" class="form-control" [(ngModel)]="joinDisplayName"
+              name="joinDisplayName" placeholder="Bob" required maxlength="100" />
+          </div>
+          <div class="mb-4 form-check">
+            <input class="form-check-input" type="checkbox" id="observer" [(ngModel)]="joinAsObserver"
+              name="joinAsObserver" />
+            <label class="form-check-label" for="observer">Join as observer (no voting)</label>
+          </div>
+          <button type="submit" class="btn btn-primary w-100"
+            [disabled]="sessionCode.trim().length !== 6 || !joinDisplayName.trim()">
+            Join Session
+          </button>
+        </form>
+      }
+
+    </div>
+  </div>
+</div>

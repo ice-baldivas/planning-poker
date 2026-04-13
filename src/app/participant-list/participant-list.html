@@ -1,0 +1,31 @@
+<ul class="list-group">
+  @for (p of participants(); track p.id) {
+    <li class="list-group-item d-flex align-items-center gap-2"
+        [class.opacity-50]="!p.is_connected">
+
+      <!-- Connection / role indicator -->
+      @if (!p.is_connected) {
+        <span class="badge bg-secondary" title="Disconnected">Away</span>
+      } @else if (p.id === scrumMasterId()) {
+        <span class="badge bg-warning text-dark" title="Scrum Master">SM</span>
+      } @else if (p.role === 'observer') {
+        <span class="badge bg-info text-dark" title="Observer">👁</span>
+      } @else {
+        <span class="badge bg-success text-white" title="Team Member">●</span>
+      }
+
+      <!-- Name -->
+      <span class="flex-grow-1 text-truncate">{{ p.display_name }}</span>
+
+      <!-- Vote status (only during active voting) -->
+      @if (sessionStatus() === 'voting' && p.role !== 'observer') {
+        @if (p.has_voted) {
+          <span class="text-success" aria-label="Voted" title="Voted">✓</span>
+        } @else {
+          <span class="text-muted" aria-label="Waiting" title="Waiting…">…</span>
+        }
+      }
+
+    </li>
+  }
+</ul>

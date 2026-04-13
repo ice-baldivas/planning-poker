@@ -1,0 +1,20 @@
+<div class="results-panel">
+  @if (result().consensus) {
+    <div class="alert alert-success text-center mb-3" role="status">
+      <strong>Consensus!</strong> Everyone chose <strong>{{ result().consensus_value }}</strong>
+    </div>
+  } @else {
+    <div class="alert alert-warning text-center mb-3" role="status">
+      No consensus — discuss and re-vote.
+    </div>
+  }
+
+  <ul class="list-group">
+    @for (vote of result().votes; track vote.participant_id) {
+      <li class="list-group-item d-flex justify-content-between align-items-center">
+        <span>{{ vote.display_name }}</span>
+        <span class="badge bg-primary rounded-pill fs-6">{{ vote.card_value }}</span>
+      </li>
+    }
+  </ul>
+</div>

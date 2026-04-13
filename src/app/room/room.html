@@ -1,0 +1,150 @@
+@if (session(); as s) {
+  <div class="container-fluid py-3">
+
+    <!-- Header -->
+    <div class="d-flex flex-wrap align-items-center gap-2 mb-3 px-2">
+      <h2 class="mb-0 me-auto text-truncate">{{ s.name }}</h2>
+      <button class="btn btn-outline-secondary btn-sm" (click)="copyCode()" title="Copy session code">
+        Code: <strong>{{ s.id }}</strong> 📋
+      </button>
+    </div>
+
+    @if (error()) {
+      <div class="alert alert-danger mx-2">{{ error() }}</div>
+    }
+
+    <div class="row g-3 px-2">
+
+      <!-- Main column -->
+      <div class="col-12 col-lg-8 d-flex flex-column gap-3">
+
+        <!-- Current story -->
+        <div class="card">
+          <div class="card-body">
+            @if (currentStory(); as story) {
+              <h5 class="card-title mb-1">{{ story.title }}</h5>
+              @if (story.description) {
+                <p class="text-muted small mb-2">{{ story.description }}</p>
+              }
+              <span class="badge"
+                [class.bg-primary]="s.status === 'voting'"
+                [class.bg-success]="s.status === 'revealed'"
+                [class.bg-secondary]="s.status === 'waiting'">
+                {{ s.status }}
+              </span>
+            } @else {
+              <p class="text-muted mb-0">No active story. Waiting for the Scrum Master to start a round.</p>
+            }
+          </div>
+        </div>
+
+        <!-- Voting cards (team members only, while voting) -->
+        @if (me()?.role !== 'observer') {
+          <div class="card">
+            <div class="card-body">
+              <h6 class="card-subtitle mb-3 text-muted">Your vote</h6>
+              <app-card-selector
+                [cards]="s.voting_scale.cards"
+                [disabled]="s.status !== 'voting' || !currentStory()"
+                (cardPicked)="onCardPicked($event)" />
+            </div>
+          </div>
+        }
+
+        <!-- Results panel (post-reveal) -->
+        @if (s.status === 'revealed' && lastResult()) {
+          <div class="card">
+            <div class="card-body">
+              <h6 class="card-subtitle mb-3 text-muted">Results</h6>
+              <app-results-panel [result]="lastResult()!" />
+            </div>
+          </div>
+        }
+
+        <!-- SM controls -->
+        @if (isScrumMaster()) {
+          <div class="card border-warning">
+            <div class="card-header bg-warning text-dark fw-semibold">Scrum Master Controls</div>
+            <div class="card-body d-flex flex-column gap-3">
+
+              <!-- Reveal / Reset -->
+              <div class="d-flex gap-2 flex-wrap">
+                <button class="btn btn-success" [disabled]="s.status !== 'voting' || !currentStory()"
+                  (click)="reveal()">Reveal Votes</button>
+                <button class="btn btn-outline-secondary" [disabled]="s.status === 'waiting'"
+                  (click)="reset()">Reset Round</button>
+              </div>
+
+              <!-- Finalize estimate -->
+              @if (s.status === 'revealed' && currentStory()) {
+                <div class="input-group">
+                  <input type="text" class="form-control" [(ngModel)]="finalEstimate"
+                    name="finalEstimate" placeholder="Final estimate…" maxlength="20" />
+                  <button class="btn btn-primary" [disabled]="!finalEstimate.trim()" (click)="finalize()">
+                    Finalize Story
+                  </button>
+                </div>
+              }
+
+              <!-- Add story -->
+              <div class="input-group">
+                <input type="text" class="form-control" [(ngModel)]="newStoryTitle"
+                  name="newStoryTitle" placeholder="New story title…" maxlength="100"
+                  (keydown.enter)="addStory()" />
+                <button class="btn btn-outline-primary" [disabled]="!newStoryTitle.trim()" (click)="addStory()">
+                  Add Story
+                </button>
+              </div>
+
+              <!-- Story queue -->
+              @if (s.stories.length > 0) {
+                <ul class="list-group">
+                  @for (story of s.stories; track story.id) {
+                    <li class="list-group-item d-flex justify-content-between align-items-center gap-2">
+                      <span class="text-truncate flex-grow-1">{{ story.title }}</span>
+                      <span class="badge"
+                        [class.bg-success]="story.status === 'estimated'"
+                        [class.bg-primary]="story.status === 'active'"
+                        [class.bg-secondary]="story.status === 'pending'">
+                        {{ story.status === 'estimated' ? (story.final_estimate ?? '?') : story.status }}
+                      </span>
+                      @if (story.status === 'pending') {
+                        <button class="btn btn-sm btn-outline-primary" (click)="setActive(story.id)">
+                          Start
+                        </button>
+                      }
+                    </li>
+                  }
+                </ul>
+              }
+
+            </div>
+          </div>
+        }
+
+      </div>
+
+      <!-- Sidebar: participants -->
+      <div class="col-12 col-lg-4">
+        <div class="card h-100">
+          <div class="card-header">
+            Participants ({{ s.participants.length }})
+          </div>
+          <div class="card-body p-0">
+            <app-participant-list
+              [participants]="s.participants"
+              [sessionStatus]="s.status"
+              [scrumMasterId]="s.scrum_master_id" />
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+} @else {
+  <div class="d-flex justify-content-center align-items-center vh-100">
+    <div class="spinner-border text-primary" role="status">
+      <span class="visually-hidden">Connecting…</span>
+    </div>
+  </div>
+}

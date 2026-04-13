@@ -1,0 +1,15 @@
+<div class="card-grid" role="group" aria-label="Voting cards">
+  @for (card of cards(); track card) {
+    <button
+      type="button"
+      class="poker-card"
+      [class.selected]="selected() === card"
+      [class.poker-card--disabled]="disabled()"
+      [attr.aria-pressed]="selected() === card"
+      [attr.aria-label]="'Vote ' + card"
+      [disabled]="disabled() || null"
+      (click)="selectCard(card)">
+      {{ card }}
+    </button>
+  }
+</div>
