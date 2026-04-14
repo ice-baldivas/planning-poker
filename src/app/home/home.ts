@@ -1,7 +1,7 @@
 import { Component, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { SessionService } from '../shared/session.service';
-import { VotingScaleId } from '../shared/types';
+import { SessionMode, VotingScaleId } from '../shared/types';
 
 @Component({
   selector: 'app-home',
@@ -16,6 +16,7 @@ export class HomeComponent {
   sessionName = '';
   createDisplayName = '';
   selectedScale: VotingScaleId = 'fibonacci';
+  selectedMode: SessionMode = 'stories';
 
   // Join form
   sessionCode = '';
@@ -32,7 +33,7 @@ export class HomeComponent {
     const name = this.sessionName.trim();
     const display_name = this.createDisplayName.trim();
     if (!name || !display_name) return;
-    this.sessionService.createSession(name, display_name, this.selectedScale);
+    this.sessionService.createSession(name, display_name, this.selectedScale, this.selectedMode);
   }
 
   joinSession(): void {

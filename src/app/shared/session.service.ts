@@ -7,6 +7,7 @@ import {
   Participant,
   Story,
   RoundResult,
+  SessionMode,
   VotingScaleId,
 } from './types';
 
@@ -97,11 +98,12 @@ export class SessionService implements OnDestroy {
       this.session.update(s => s ? { ...s, status: 'revealed' } : s);
     });
 
-    this.sub(this.socket.on<{ story_id: string | null }>('round_reset'), () => {
+    this.sub(this.socket.on<{ round_number: number }>('round_reset'), ({ round_number }) => {
       this.lastResult.set(null);
       this.session.update(s => s ? {
         ...s,
         status: 'voting',
+        round_number,
         participants: s.participants.map(p => ({ ...p, has_voted: false })),
       } : s);
     });
@@ -152,10 +154,10 @@ export class SessionService implements OnDestroy {
   // ---------------------------------------------------------------------------
   // Public actions
   // ---------------------------------------------------------------------------
-  createSession(name: string, display_name: string, voting_scale_id: VotingScaleId): void {
+  createSession(name: string, display_name: string, voting_scale_id: VotingScaleId, session_mode: SessionMode = 'stories'): void {
     this.error.set(null);
     this.socket.connect();
-    this.socket.emit('create_session', { name, display_name, voting_scale_id });
+    this.socket.emit('create_session', { name, display_name, voting_scale_id, session_mode });
     this.waitForSession();
   }
 

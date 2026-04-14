@@ -17,7 +17,7 @@ To define the design and behavioral requirements for a Planning Poker web applic
 
 ### Scope
 
-- **In scope**: Session creation and joining, user identity within a session, story queue management, card selection, vote reveal, round replay, and session statistics.
+- **In scope**: Session creation and joining, user identity within a session, session mode selection (Story Mode or Free Round Mode), story queue management, card selection, vote reveal, round replay, and session statistics.
 - **Out of scope**: Persistent user accounts, integration with project management tools (e.g., Jira, Linear), billing, and administrative dashboards.
 
 ### Audience
@@ -49,6 +49,10 @@ Frontend and backend developers building or extending this application. May also
 | **Consensus** | A state where all Team Members have selected the same Card value. |
 | **Planning Poker** | An Agile estimation technique where team members simultaneously reveal their estimates to avoid anchoring bias. |
 | **Anchoring Bias** | The cognitive bias where an initial value disproportionately influences subsequent estimates. |
+| **Session Mode** | A configuration choice made at session creation that determines whether the session uses a story queue (Story Mode) or free-form rounds (Free Round Mode). Immutable after creation. |
+| **Story Mode** | A session mode in which the Scrum Master manages a queue of Stories and each Voting Round is associated with a specific Story. |
+| **Free Round Mode** | A session mode in which Voting Rounds are independent of Stories. The Scrum Master starts, reveals, and resets rounds freely without creating or managing Stories. |
+| **Round Number** | A sequential integer (starting at 1) that identifies the current Voting Round in Free Round Mode. Incremented each time the round is reset. |
 | **WebSocket** | A full-duplex communication protocol over a single TCP connection used for real-time updates. |
 | **SPA** | Single-Page Application — an application that loads a single HTML page and dynamically updates content. |
 
@@ -76,6 +80,11 @@ Frontend and backend developers building or extending this application. May also
 - **REQ-016**: An Observer role shall be available; Observers can join and view the session but cannot cast votes.
 - **REQ-017**: The application shall handle a participant disconnecting and reconnecting gracefully, restoring their session state.
 - **REQ-018**: The Scrum Master shall be able to transfer the Scrum Master role to another participant.
+- **REQ-019**: When creating a session, the Scrum Master shall select a session mode (Story Mode or Free Round Mode) via a radio button control before the session is created.
+- **REQ-020**: In Free Round Mode, the Scrum Master shall be able to reveal all votes and reset the round without creating or selecting a Story.
+- **REQ-021**: In Free Round Mode, the story queue, story management controls (add story, set active story, finalize story), and story-related UI shall not be rendered.
+- **REQ-022**: The session mode shall be immutable after the session is created; it cannot be changed mid-session.
+- **REQ-023**: In Free Round Mode, the session shall track a sequential round number (starting at 1) that increments each time the round is reset, providing context for participants.
 
 ### Security Requirements
 
@@ -120,9 +129,11 @@ interface Session {
   name: string;           // Human-readable session name
   scrum_master_id: string;
   voting_scale: VotingScale;
+  session_mode: 'stories' | 'free';  // Set at creation; immutable thereafter
   status: 'waiting' | 'voting' | 'revealed';
-  current_story_id: string | null;
-  stories: Story[];
+  current_story_id: string | null;   // Always null in Free Round Mode
+  round_number: number;              // Increments on reset; always 1 at session start
+  stories: Story[];                  // Always empty in Free Round Mode
   participants: Participant[];
   created_at: string;     // ISO 8601
 }
@@ -157,7 +168,8 @@ interface Story {
 ```typescript
 interface Vote {
   participant_id: string;
-  story_id: string;
+  story_id: string | null;  // Null in Free Round Mode
+  round_number: number;     // Always set; used to scope votes to the current round
   card_value: string;    // e.g., "5", "13", "?", "☕"
   submitted_at: string;  // ISO 8601
 }
@@ -192,7 +204,8 @@ const TSHIRT_SCALE: VotingScale = {
 
 ```typescript
 interface RoundResult {
-  story_id: string;
+  story_id: string | null;  // Null in Free Round Mode
+  round_number: number;
   votes: { participant_id: string; display_name: string; card_value: string }[];
   average: number | null;   // Null if non-numeric cards were cast
   median: number | null;
@@ -210,10 +223,10 @@ All events are JSON-encoded. The `type` field identifies the event.
 | Event Type | Payload | Description |
 |---|---|---|
 | `join_session` | `{ session_id, display_name, role }` | Join an existing session |
-| `create_session` | `{ name, voting_scale_id, display_name }` | Create a new session |
-| `add_story` | `{ session_id, title, description? }` | SM adds a story to the queue |
-| `set_active_story` | `{ session_id, story_id }` | SM sets the active story |
-| `cast_vote` | `{ session_id, story_id, card_value }` | Team Member casts a vote |
+| `create_session` | `{ name, voting_scale_id, session_mode, display_name }` | Create a new session |
+| `add_story` | `{ session_id, title, description? }` | SM adds a story to the queue (Story Mode only) |
+| `set_active_story` | `{ session_id, story_id }` | SM sets the active story (Story Mode only) |
+| `cast_vote` | `{ session_id, story_id?, card_value }` | Team Member casts a vote (`story_id` omitted in Free Round Mode) |
 | `reveal_votes` | `{ session_id }` | SM reveals all votes |
 | `reset_round` | `{ session_id }` | SM clears all votes for current story |
 | `finalize_story` | `{ session_id, story_id, final_estimate }` | SM finalizes a story estimate |
@@ -229,10 +242,10 @@ All events are JSON-encoded. The `type` field identifies the event.
 | `participant_reconnected` | `{ participant_id }` | A participant reconnected |
 | `vote_cast` | `{ participant_id }` | A vote was cast (value hidden) |
 | `votes_revealed` | `RoundResult` | Votes are now revealed |
-| `round_reset` | `{ story_id }` | Votes cleared; round restarted |
-| `story_added` | `Story` | A new story was added to the queue |
-| `active_story_changed` | `{ story_id }` | A different story is now active |
-| `story_finalized` | `Story` | A story received a final estimate |
+| `round_reset` | `{ round_number }` | Votes cleared; new round number broadcast to all participants |
+| `story_added` | `Story` | A new story was added to the queue (Story Mode only) |
+| `active_story_changed` | `{ story_id }` | A different story is now active (Story Mode only) |
+| `story_finalized` | `Story` | A story received a final estimate (Story Mode only) |
 | `sm_transferred` | `{ new_sm_id }` | Scrum Master role transferred |
 | `error` | `{ code, message }` | An error occurred |
 
@@ -242,8 +255,8 @@ These endpoints support initial session setup where a WebSocket handshake requir
 
 | Method | Path | Description |
 |---|---|---|
-| `POST` | `/api/sessions` | Create a new session; returns `{ session_id, join_url }` |
-| `GET` | `/api/sessions/:id` | Returns public session metadata (name, scale, participant count) |
+| `POST` | `/api/sessions` | Create a new session; accepts `{ name, voting_scale_id, session_mode, display_name }`; returns `{ session_id, join_url }` |
+| `GET` | `/api/sessions/:id` | Returns public session metadata (name, scale, session_mode, participant count) |
 
 ---
 
@@ -259,6 +272,10 @@ These endpoints support initial session setup where a WebSocket handshake requir
 - **AC-008**: Given a Scrum Master finalizes a story, when the next story is set as active, then a new clean Voting Round begins for all participants.
 - **AC-009**: Non-numeric card selections (?, ∞, ☕) shall be excluded from average and median calculations; consensus detection shall still function with mixed or non-numeric cards.
 - **AC-010**: Given a participant joins as an Observer, then the card selector is not rendered for that participant, and they are excluded from vote status tracking.
+- **AC-011**: Given a user is creating a session, when the session creation form is displayed, then a radio button control allows the user to select either Story Mode or Free Round Mode before creating the session.
+- **AC-012**: Given a session is created in Free Round Mode, when the room is viewed by any participant, then no story queue, add-story form, set-active-story control, or finalize-story control is rendered; only the card selector, participant list, results panel, and round controls (reveal, reset) are shown.
+- **AC-013**: Given a session is in Free Round Mode and votes are revealed, when the Scrum Master resets the round, then the round number increments by one and all participants see the updated round number with a fresh voting state.
+- **AC-014**: Given a session is created in Story Mode, then Free Round Mode controls (bare round number) are not shown and the full story queue workflow applies as per existing acceptance criteria.
 
 ---
 
@@ -376,6 +393,9 @@ This application requires a backend server. A frontend-only architecture is not 
 | Session URL accessed after all participants have left | A new participant can still join; the session state is preserved while the server holds it in memory. |
 | Participant joins during vote reveal state | They join and immediately see the revealed votes. |
 | Story queue is empty and SM clicks "next" | The application enters a "waiting for stories" state; voting is disabled until a story is added. |
+| Session is in Free Round Mode and SM resets the round | Round number increments; all votes are cleared; all participants can select a new card. Round number is broadcast to all connected clients via `round_reset`. |
+| Participant joins a Free Round Mode session mid-round | They receive full session state including the current `round_number` and existing vote statuses; they may cast a vote for the current round. |
+| Participant joins a Free Round Mode session during reveal | They join and immediately see the revealed votes and current `round_number`. |
 
 ---
 
@@ -391,6 +411,10 @@ This application requires a backend server. A frontend-only architecture is not 
 - [ ] An Observer cannot cast a vote.
 - [ ] Session IDs contain sufficient entropy that brute-force guessing is computationally infeasible.
 - [ ] All user-supplied input is rendered safely; injected HTML or script tags are not executed.
+- [ ] When creating a session, a radio button allows selection of Story Mode or Free Round Mode; the chosen mode is reflected in the session state returned by the server.
+- [ ] In Free Round Mode, the story queue and story management UI are not rendered for any participant.
+- [ ] In Free Round Mode, the round number increments from 1 to 2 after the first reset and is visible to all participants.
+- [ ] In Free Round Mode, participants can vote, the SM can reveal, and the SM can reset without any story being present.
 
 ---
 

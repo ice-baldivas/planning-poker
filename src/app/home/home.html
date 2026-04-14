@@ -35,13 +35,30 @@
             <input id="createDisplayName" type="text" class="form-control" [(ngModel)]="createDisplayName"
               name="createDisplayName" placeholder="Alice" required maxlength="100" />
           </div>
-          <div class="mb-4">
+          <div class="mb-3">
             <label for="scale" class="form-label">Voting scale</label>
             <select id="scale" class="form-select" [(ngModel)]="selectedScale" name="scale">
               <option value="fibonacci">Fibonacci (1 2 3 5 8 13 21 …)</option>
               <option value="tshirt">T-Shirt Sizes (XS S M L XL XXL)</option>
             </select>
           </div>
+          <fieldset class="mb-4">
+            <legend class="form-label">Session mode</legend>
+            <div class="form-check">
+              <input class="form-check-input" type="radio" id="modeStories" name="sessionMode"
+                value="stories" [(ngModel)]="selectedMode" />
+              <label class="form-check-label" for="modeStories">
+                <strong>Stories</strong> — manage a backlog of stories; each round is linked to a story
+              </label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="radio" id="modeFree" name="sessionMode"
+                value="free" [(ngModel)]="selectedMode" />
+              <label class="form-check-label" for="modeFree">
+                <strong>Free rounds</strong> — start, reveal, and reset rounds without creating stories
+              </label>
+            </div>
+          </fieldset>
           <button type="submit" class="btn btn-primary w-100"
             [disabled]="!sessionName.trim() || !createDisplayName.trim()">
             Create Session
