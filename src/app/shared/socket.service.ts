@@ -1,8 +1,9 @@
 import { Injectable, OnDestroy } from '@angular/core';
 import { io, Socket } from 'socket.io-client';
 import { Observable } from 'rxjs';
+import { environment } from '../../environments/environment';
 
-const SERVER_URL = 'http://localhost:3000';
+const SERVER_URL = environment.serverUrl;
 
 @Injectable({ providedIn: 'root' })
 export class SocketService implements OnDestroy {
