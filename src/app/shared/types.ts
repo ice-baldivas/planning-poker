@@ -1,6 +1,6 @@
 export type VotingScaleId = 'fibonacci' | 'tshirt';
 export type SessionMode = 'stories' | 'free';
-export type ParticipantRole = 'scrum_master' | 'team_member' | 'observer';
+export type ParticipantRole = 'moderator' | 'team_member' | 'observer';
 export type SessionStatus = 'waiting' | 'voting' | 'revealed';
 
 export interface VotingScale {
@@ -34,7 +34,7 @@ export interface RoundResult {
 export interface SessionState {
   id: string;
   name: string;
-  scrum_master_id: string;
+  moderator_id: string;
   voting_scale: VotingScale;
   session_mode: SessionMode;
   round_number: number;

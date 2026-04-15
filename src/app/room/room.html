@@ -37,7 +37,7 @@
                   {{ s.status }}
                 </span>
               } @else {
-                <p class="text-muted mb-0">No active story. Waiting for the Scrum Master to start a round.</p>
+                <p class="text-muted mb-0">No active story. Waiting for the Moderator to start a round.</p>
               }
             </div>
           </div>
@@ -82,9 +82,9 @@
         }
 
         <!-- SM controls -->
-        @if (isScrumMaster()) {
+        @if (isModerator()) {
           <div class="card border-primary">
-            <div class="card-header bg-primary text-light fw-semibold">Scrum Master Controls</div>
+            <div class="card-header bg-primary text-light fw-semibold">Moderator Controls</div>
             <div class="card-body d-flex flex-column gap-3">
 
               @if (s.session_mode === 'free') {
@@ -161,7 +161,7 @@
             <app-participant-list
               [participants]="s.participants"
               [sessionStatus]="s.status"
-              [scrumMasterId]="s.scrum_master_id" />
+              [moderatorId]="s.moderator_id" />
           </div>
         </div>
       </div>
