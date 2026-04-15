@@ -17,7 +17,7 @@ export class RoomComponent implements OnInit {
 
   readonly session;
   readonly me;
-  readonly isScrumMaster;
+  readonly isModerator;
   readonly currentStory;
   readonly lastResult;
   readonly error;
@@ -32,7 +32,7 @@ export class RoomComponent implements OnInit {
   ) {
     this.session = sessionService.session;
     this.me = sessionService.me;
-    this.isScrumMaster = sessionService.isScrumMaster;
+    this.isModerator = sessionService.isModerator;
     this.currentStory = sessionService.currentStory;
     this.lastResult = sessionService.lastResult;
     this.error = sessionService.error;
@@ -82,5 +82,9 @@ export class RoomComponent implements OnInit {
   copyCode(): void {
     const code = this.session()?.id;
     if (code) navigator.clipboard.writeText(code);
+  }
+
+  leaveSession(): void {
+    this.sessionService.leaveSession();
   }
 }

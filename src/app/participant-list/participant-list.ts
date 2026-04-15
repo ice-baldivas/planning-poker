@@ -10,5 +10,5 @@ import { Participant } from '../shared/types';
 export class ParticipantListComponent {
   participants = input.required<Participant[]>();
   sessionStatus = input.required<'waiting' | 'voting' | 'revealed'>();
-  scrumMasterId = input.required<string>();
+  moderatorId = input.required<string>();
 }

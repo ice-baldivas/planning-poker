@@ -37,7 +37,7 @@ export class SessionService implements OnDestroy {
     return s.participants.find(p => p.id === id) ?? null;
   });
 
-  readonly isScrumMaster = computed(() => this.me()?.role === 'scrum_master');
+  readonly isModerator = computed(() => this.me()?.role === 'moderator');
 
   readonly currentStory = computed(() => {
     const s = this.session();
@@ -138,10 +138,10 @@ export class SessionService implements OnDestroy {
     this.sub(this.socket.on<{ new_sm_id: string }>('sm_transferred'), ({ new_sm_id }) => {
       this.session.update(s => s ? {
         ...s,
-        scrum_master_id: new_sm_id,
+        moderator_id: new_sm_id,
         participants: s.participants.map(p => ({
           ...p,
-          role: p.id === new_sm_id ? 'scrum_master' : (p.role === 'scrum_master' ? 'team_member' : p.role),
+          role: p.id === new_sm_id ? 'moderator' : (p.role === 'moderator' ? 'team_member' : p.role),
         })),
       } : s);
     });
@@ -196,6 +196,16 @@ export class SessionService implements OnDestroy {
 
   transferSM(new_sm_id: string): void {
     this.socket.emit('transfer_sm', { new_sm_id });
+  }
+
+  leaveSession(): void {
+    this.socket.disconnect();
+    this.session.set(null);
+    this.myParticipantId.set(null);
+    this.lastResult.set(null);
+    this.error.set(null);
+    sessionStorage.removeItem(STORAGE_KEY);
+    this.router.navigate(['/']);
   }
 
   // ---------------------------------------------------------------------------
