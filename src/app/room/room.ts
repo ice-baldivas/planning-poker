@@ -83,4 +83,8 @@ export class RoomComponent implements OnInit {
     const code = this.session()?.id;
     if (code) navigator.clipboard.writeText(code);
   }
+
+  leaveSession(): void {
+    this.sessionService.leaveSession();
+  }
 }

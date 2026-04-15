@@ -7,7 +7,7 @@
       @if (!p.is_connected) {
         <span class="badge bg-secondary" title="Disconnected">Away</span>
       } @else if (p.id === scrumMasterId()) {
-        <span class="badge bg-warning text-dark" title="Scrum Master">SM</span>
+        <span class="badge bg-primary text-light" title="Scrum Master">SM</span>
       } @else if (p.role === 'observer') {
         <span class="badge bg-info text-dark" title="Observer">👁</span>
       } @else {

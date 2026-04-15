@@ -198,6 +198,16 @@ export class SessionService implements OnDestroy {
     this.socket.emit('transfer_sm', { new_sm_id });
   }
 
+  leaveSession(): void {
+    this.socket.disconnect();
+    this.session.set(null);
+    this.myParticipantId.set(null);
+    this.lastResult.set(null);
+    this.error.set(null);
+    sessionStorage.removeItem(STORAGE_KEY);
+    this.router.navigate(['/']);
+  }
+
   // ---------------------------------------------------------------------------
   // Helpers
   // ---------------------------------------------------------------------------
