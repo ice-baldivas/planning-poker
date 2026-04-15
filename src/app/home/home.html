@@ -102,10 +102,11 @@
           <button
             type="submit"
             class="btn btn-primary w-100"
-            [disabled]="!sessionName.trim() || !createDisplayName.trim()"
+            [disabled]="!sessionName.trim() || !createDisplayName.trim() || isConnecting()"
           >
             Create Session
           </button>
+          <app-connection-status />
         </form>
       }
 
@@ -153,10 +154,11 @@
           <button
             type="submit"
             class="btn btn-primary w-100"
-            [disabled]="sessionCode.trim().length !== 6 || !joinDisplayName.trim()"
+            [disabled]="sessionCode.trim().length !== 6 || !joinDisplayName.trim() || isConnecting()"
           >
             Join Session
           </button>
+          <app-connection-status />
         </form>
       }
     </div>
