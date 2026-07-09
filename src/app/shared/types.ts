@@ -31,6 +31,16 @@ export interface RoundResult {
   consensus_value: string | null;
 }
 
+/** Public metadata returned by GET /api/sessions/:id, used by the room join gate. */
+export interface SessionPreview {
+  id: string;
+  name: string;
+  voting_scale: VotingScale;
+  session_mode: SessionMode;
+  participant_count: number;
+  status: SessionStatus;
+}
+
 export interface SessionState {
   id: string;
   name: string;

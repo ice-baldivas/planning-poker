@@ -1,14 +1,24 @@
 @if (session(); as s) {
   <div class="container-fluid py-3">
-
     <!-- Header -->
     <div class="d-flex flex-wrap align-items-center gap-2 mb-3 px-2">
       <h2 class="mb-0 me-auto text-truncate">{{ s.name }}</h2>
       <button class="btn btn-outline-secondary btn-sm" (click)="leaveSession()">
         Leave Session
       </button>
-      <button class="btn btn-outline-secondary btn-sm" (click)="copyCode()" title="Copy session code">
+      <button
+        class="btn btn-outline-secondary btn-sm"
+        (click)="copyCode()"
+        title="Copy session code"
+      >
         Code: <strong>{{ s.id }}</strong> 📋
+      </button>
+      <button
+        class="btn btn-outline-secondary btn-sm"
+        (click)="copyLink()"
+        title="Copy invite link"
+      >
+        Copy Link 🔗
       </button>
     </div>
 
@@ -17,10 +27,8 @@
     }
 
     <div class="row g-3 px-2">
-
       <!-- Main column -->
       <div class="col-12 col-lg-8 d-flex flex-column gap-3">
-
         <!-- Current story (Story Mode only) -->
         @if (s.session_mode === 'stories') {
           <div class="card">
@@ -30,14 +38,18 @@
                 @if (story.description) {
                   <p class="text-muted small mb-2">{{ story.description }}</p>
                 }
-                <span class="badge"
+                <span
+                  class="badge"
                   [class.bg-primary]="s.status === 'voting'"
                   [class.bg-success]="s.status === 'revealed'"
-                  [class.bg-secondary]="s.status === 'waiting'">
+                  [class.bg-secondary]="s.status === 'waiting'"
+                >
                   {{ s.status }}
                 </span>
               } @else {
-                <p class="text-muted mb-0">No active story. Waiting for the Moderator to start a round.</p>
+                <p class="text-muted mb-0">
+                  No active story. Waiting for the Moderator to start a round.
+                </p>
               }
             </div>
           </div>
@@ -48,10 +60,12 @@
           <div class="card">
             <div class="card-body d-flex align-items-center gap-3">
               <span class="fs-5 fw-semibold">Round {{ s.round_number }}</span>
-              <span class="badge"
+              <span
+                class="badge"
                 [class.bg-primary]="s.status === 'voting'"
                 [class.bg-success]="s.status === 'revealed'"
-                [class.bg-secondary]="s.status === 'waiting'">
+                [class.bg-secondary]="s.status === 'waiting'"
+              >
                 {{ s.status }}
               </span>
             </div>
@@ -65,8 +79,11 @@
               <h6 class="card-subtitle mb-3 text-muted">Your vote</h6>
               <app-card-selector
                 [cards]="s.voting_scale.cards"
-                [disabled]="s.status !== 'voting' || (s.session_mode === 'stories' && !currentStory())"
-                (cardPicked)="onCardPicked($event)" />
+                [disabled]="
+                  s.status !== 'voting' || (s.session_mode === 'stories' && !currentStory())
+                "
+                (cardPicked)="onCardPicked($event)"
+              />
             </div>
           </div>
         }
@@ -86,39 +103,78 @@
           <div class="card border-primary">
             <div class="card-header bg-primary text-light fw-semibold">Moderator Controls</div>
             <div class="card-body d-flex flex-column gap-3">
-
               @if (s.session_mode === 'free') {
                 <!-- Free Round Mode: reveal + reset only -->
                 <div class="d-flex gap-2 flex-wrap">
-                  <button class="btn btn-success" [disabled]="s.status !== 'voting'"
-                    (click)="reveal()">Reveal Votes</button>
-                  <button class="btn btn-outline-secondary" [disabled]="s.status !== 'revealed'"
-                    (click)="reset()">Next Round</button>
+                  <button
+                    class="btn btn-success"
+                    [disabled]="s.status !== 'voting'"
+                    (click)="reveal()"
+                  >
+                    Reveal Votes
+                  </button>
+                  <button
+                    class="btn btn-outline-secondary"
+                    [disabled]="s.status !== 'revealed'"
+                    (click)="reset()"
+                  >
+                    Next Round
+                  </button>
                 </div>
               } @else {
                 <!-- Story Mode: reveal, reset, finalize, add story, queue -->
                 <div class="d-flex gap-2 flex-wrap">
-                  <button class="btn btn-success" [disabled]="s.status !== 'voting' || !currentStory()"
-                    (click)="reveal()">Reveal Votes</button>
-                  <button class="btn btn-outline-secondary" [disabled]="s.status === 'waiting'"
-                    (click)="reset()">Reset Round</button>
+                  <button
+                    class="btn btn-success"
+                    [disabled]="s.status !== 'voting' || !currentStory()"
+                    (click)="reveal()"
+                  >
+                    Reveal Votes
+                  </button>
+                  <button
+                    class="btn btn-outline-secondary"
+                    [disabled]="s.status === 'waiting'"
+                    (click)="reset()"
+                  >
+                    Reset Round
+                  </button>
                 </div>
 
                 @if (s.status === 'revealed' && currentStory()) {
                   <div class="input-group">
-                    <input type="text" class="form-control" [(ngModel)]="finalEstimate"
-                      name="finalEstimate" placeholder="Final estimate…" maxlength="20" />
-                    <button class="btn btn-primary" [disabled]="!finalEstimate.trim()" (click)="finalize()">
+                    <input
+                      type="text"
+                      class="form-control"
+                      [(ngModel)]="finalEstimate"
+                      name="finalEstimate"
+                      placeholder="Final estimate…"
+                      maxlength="20"
+                    />
+                    <button
+                      class="btn btn-primary"
+                      [disabled]="!finalEstimate.trim()"
+                      (click)="finalize()"
+                    >
                       Finalize Story
                     </button>
                   </div>
                 }
 
                 <div class="input-group">
-                  <input type="text" class="form-control" [(ngModel)]="newStoryTitle"
-                    name="newStoryTitle" placeholder="New story title…" maxlength="100"
-                    (keydown.enter)="addStory()" />
-                  <button class="btn btn-outline-primary" [disabled]="!newStoryTitle.trim()" (click)="addStory()">
+                  <input
+                    type="text"
+                    class="form-control"
+                    [(ngModel)]="newStoryTitle"
+                    name="newStoryTitle"
+                    placeholder="New story title…"
+                    maxlength="100"
+                    (keydown.enter)="addStory()"
+                  />
+                  <button
+                    class="btn btn-outline-primary"
+                    [disabled]="!newStoryTitle.trim()"
+                    (click)="addStory()"
+                  >
                     Add Story
                   </button>
                 </div>
@@ -126,16 +182,27 @@
                 @if (s.stories.length > 0) {
                   <ul class="list-group">
                     @for (story of s.stories; track story.id) {
-                      <li class="list-group-item d-flex justify-content-between align-items-center gap-2">
+                      <li
+                        class="list-group-item d-flex justify-content-between align-items-center gap-2"
+                      >
                         <span class="text-truncate flex-grow-1">{{ story.title }}</span>
-                        <span class="badge"
+                        <span
+                          class="badge"
                           [class.bg-success]="story.status === 'estimated'"
                           [class.bg-primary]="story.status === 'active'"
-                          [class.bg-secondary]="story.status === 'pending'">
-                          {{ story.status === 'estimated' ? (story.final_estimate ?? '?') : story.status }}
+                          [class.bg-secondary]="story.status === 'pending'"
+                        >
+                          {{
+                            story.status === 'estimated'
+                              ? (story.final_estimate ?? '?')
+                              : story.status
+                          }}
                         </span>
                         @if (story.status === 'pending') {
-                          <button class="btn btn-sm btn-outline-primary" (click)="setActive(story.id)">
+                          <button
+                            class="btn btn-sm btn-outline-primary"
+                            (click)="setActive(story.id)"
+                          >
                             Start
                           </button>
                         }
@@ -144,29 +211,114 @@
                   </ul>
                 }
               }
-
             </div>
           </div>
         }
-
       </div>
 
       <!-- Sidebar: participants -->
       <div class="col-12 col-lg-4">
         <div class="card h-100">
-          <div class="card-header">
-            Participants ({{ s.participants.length }})
-          </div>
+          <div class="card-header">Participants ({{ s.participants.length }})</div>
           <div class="card-body p-0">
             <app-participant-list
               [participants]="s.participants"
               [sessionStatus]="s.status"
-              [moderatorId]="s.moderator_id" />
+              [moderatorId]="s.moderator_id"
+              [isModerator]="isModerator()"
+              [myParticipantId]="me()?.id ?? null"
+              (remove)="removeParticipant($event)"
+            />
           </div>
         </div>
       </div>
-
     </div>
+  </div>
+} @else if (gateState() === 'gate') {
+  <div class="container py-5 min-vh-100 d-flex flex-column justify-content-center">
+    <div class="row justify-content-center">
+      <div class="col-12 col-sm-10 col-md-7 col-lg-5">
+        <h2 class="text-center mb-1">{{ gateSessionName() }}</h2>
+        <p class="text-center text-muted mb-4">
+          You've been invited to join this planning poker session.
+        </p>
+
+        @if (error()) {
+          <div class="alert alert-danger" role="alert">{{ error() }}</div>
+        }
+
+        <form (ngSubmit)="submitGate()">
+          <div class="mb-3">
+            <label for="gateDisplayName" class="form-label">Your name</label>
+            <input
+              id="gateDisplayName"
+              type="text"
+              class="form-control"
+              [(ngModel)]="gateDisplayName"
+              name="gateDisplayName"
+              [disabled]="gateAnonymous"
+              placeholder="Bob"
+              maxlength="100"
+              required
+            />
+          </div>
+          <div class="mb-3 form-check">
+            <input
+              class="form-check-input"
+              type="checkbox"
+              id="gateAnonymous"
+              [(ngModel)]="gateAnonymous"
+              name="gateAnonymous"
+              (change)="toggleGateAnonymous()"
+            />
+            <label class="form-check-label" for="gateAnonymous">Join anonymously</label>
+          </div>
+          <fieldset class="mb-4">
+            <legend class="form-label">Join as</legend>
+            <div class="form-check">
+              <input
+                class="form-check-input"
+                type="radio"
+                id="roleParticipant"
+                name="gateRole"
+                value="team_member"
+                [(ngModel)]="gateRole"
+              />
+              <label class="form-check-label" for="roleParticipant">
+                <strong>Participant</strong> — can vote
+              </label>
+            </div>
+            <div class="form-check">
+              <input
+                class="form-check-input"
+                type="radio"
+                id="roleSpectator"
+                name="gateRole"
+                value="observer"
+                [(ngModel)]="gateRole"
+              />
+              <label class="form-check-label" for="roleSpectator">
+                <strong>Spectator</strong> — observe only, no voting
+              </label>
+            </div>
+          </fieldset>
+          <button
+            type="submit"
+            class="btn btn-primary w-100"
+            [disabled]="!gateDisplayName.trim() || isConnecting()"
+          >
+            Join Session
+          </button>
+          <app-connection-status />
+        </form>
+      </div>
+    </div>
+  </div>
+} @else if (gateState() === 'not-found') {
+  <div class="d-flex flex-column justify-content-center align-items-center vh-100 gap-3 text-center px-3">
+    <h3>Session not found</h3>
+    <p class="text-muted mb-0">This invite link is invalid or the session has ended.</p>
+    <a routerLink="/" class="btn btn-primary">Back to Home</a>
   </div>
 } @else {
   <div class="d-flex justify-content-center align-items-center vh-100">

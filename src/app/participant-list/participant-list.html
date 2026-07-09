@@ -1,8 +1,9 @@
 <ul class="list-group">
   @for (p of participants(); track p.id) {
-    <li class="list-group-item d-flex align-items-center gap-2"
-        [class.opacity-50]="!p.is_connected">
-
+    <li
+      class="list-group-item d-flex align-items-center gap-2"
+      [class.opacity-50]="!p.is_connected"
+    >
       <!-- Connection / role indicator -->
       @if (!p.is_connected) {
         <span class="badge bg-secondary" title="Disconnected">Away</span>
@@ -26,6 +27,18 @@
         }
       }
 
+      <!-- Moderator removal control -->
+      @if (isModerator() && p.id !== myParticipantId()) {
+        <button
+          type="button"
+          class="btn btn-outline-danger btn-sm"
+          title="Remove {{ p.display_name }}"
+          [attr.aria-label]="'Remove ' + p.display_name"
+          (click)="onRemove(p)"
+        >
+          ✕
+        </button>
+      }
     </li>
   }
 </ul>
