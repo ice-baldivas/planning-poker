@@ -28,6 +28,18 @@
         </li>
       </ul>
 
+      @if (notice()) {
+        <div class="alert alert-warning alert-dismissible" role="alert">
+          {{ notice() }}
+          <button
+            type="button"
+            class="btn-close"
+            aria-label="Dismiss"
+            (click)="dismissNotice()"
+          ></button>
+        </div>
+      }
+
       @if (error()) {
         <div class="alert alert-danger" role="alert">{{ error() }}</div>
       }

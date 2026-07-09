@@ -84,6 +84,10 @@ export class RoomComponent implements OnInit {
     if (code) navigator.clipboard.writeText(code);
   }
 
+  removeParticipant(participant_id: string): void {
+    this.sessionService.removeParticipant(participant_id);
+  }
+
   leaveSession(): void {
     this.sessionService.leaveSession();
   }

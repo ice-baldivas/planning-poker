@@ -27,12 +27,14 @@ export class HomeComponent {
 
   readonly error;
   readonly isConnecting;
+  readonly notice;
 
   constructor(
     private sessionService: SessionService,
     socketService: SocketService,
   ) {
     this.error = sessionService.error;
+    this.notice = sessionService.notice;
     this.isConnecting = computed(() => {
       const s = socketService.connectionStatus();
       return s === 'connecting' || s === 'reconnecting';
@@ -55,5 +57,9 @@ export class HomeComponent {
       display_name,
       this.joinAsObserver ? 'observer' : 'team_member',
     );
+  }
+
+  dismissNotice(): void {
+    this.sessionService.dismissNotice();
   }
 }

@@ -2,14 +2,7 @@ import { Injectable, OnDestroy, signal, computed } from '@angular/core';
 import { Router } from '@angular/router';
 import { Observable, Subscription } from 'rxjs';
 import { SocketService } from './socket.service';
-import {
-  SessionState,
-  Participant,
-  Story,
-  RoundResult,
-  SessionMode,
-  VotingScaleId,
-} from './types';
+import { SessionState, Participant, Story, RoundResult, SessionMode, VotingScaleId } from './types';
 
 const STORAGE_KEY = 'pp_participant';
 
@@ -29,12 +22,14 @@ export class SessionService implements OnDestroy {
   readonly myParticipantId = signal<string | null>(null);
   readonly lastResult = signal<RoundResult | null>(null);
   readonly error = signal<string | null>(null);
+  /** Transient notice (e.g. "you were removed") that must survive navigation to Home. */
+  readonly notice = signal<string | null>(null);
 
   readonly me = computed(() => {
     const s = this.session();
     const id = this.myParticipantId();
     if (!s || !id) return null;
-    return s.participants.find(p => p.id === id) ?? null;
+    return s.participants.find((p) => p.id === id) ?? null;
   });
 
   readonly isModerator = computed(() => this.me()?.role === 'moderator');
@@ -42,10 +37,13 @@ export class SessionService implements OnDestroy {
   readonly currentStory = computed(() => {
     const s = this.session();
     if (!s?.current_story_id) return null;
-    return s.stories.find(st => st.id === s.current_story_id) ?? null;
+    return s.stories.find((st) => st.id === s.current_story_id) ?? null;
   });
 
-  constructor(private socket: SocketService, private router: Router) {
+  constructor(
+    private socket: SocketService,
+    private router: Router,
+  ) {
     this.registerSocketEvents();
   }
 
@@ -53,7 +51,7 @@ export class SessionService implements OnDestroy {
   // Socket event wiring
   // ---------------------------------------------------------------------------
   private registerSocketEvents(): void {
-    this.sub(this.socket.on<SessionState>('session_state'), state => {
+    this.sub(this.socket.on<SessionState>('session_state'), (state) => {
       if (state.your_participant_id) {
         this.myParticipantId.set(state.your_participant_id);
         this.persist({ session_id: state.id, participant_id: state.your_participant_id });
@@ -62,91 +60,151 @@ export class SessionService implements OnDestroy {
       this.lastResult.set(null);
     });
 
-    this.sub(this.socket.on<Participant>('participant_joined'), p => {
-      this.session.update(s => s ? { ...s, participants: [...s.participants, p] } : s);
+    this.sub(this.socket.on<Participant>('participant_joined'), (p) => {
+      this.session.update((s) => (s ? { ...s, participants: [...s.participants, p] } : s));
     });
 
-    this.sub(this.socket.on<{ participant_id: string }>('participant_left'), ({ participant_id }) => {
-      this.session.update(s => s ? {
-        ...s,
-        participants: s.participants.map(p =>
-          p.id === participant_id ? { ...p, is_connected: false } : p
-        ),
-      } : s);
-    });
+    this.sub(
+      this.socket.on<{ participant_id: string }>('participant_left'),
+      ({ participant_id }) => {
+        this.session.update((s) =>
+          s
+            ? {
+                ...s,
+                participants: s.participants.map((p) =>
+                  p.id === participant_id ? { ...p, is_connected: false } : p,
+                ),
+              }
+            : s,
+        );
+      },
+    );
 
-    this.sub(this.socket.on<{ participant_id: string }>('participant_reconnected'), ({ participant_id }) => {
-      this.session.update(s => s ? {
-        ...s,
-        participants: s.participants.map(p =>
-          p.id === participant_id ? { ...p, is_connected: true } : p
-        ),
-      } : s);
+    this.sub(
+      this.socket.on<{ participant_id: string }>('participant_reconnected'),
+      ({ participant_id }) => {
+        this.session.update((s) =>
+          s
+            ? {
+                ...s,
+                participants: s.participants.map((p) =>
+                  p.id === participant_id ? { ...p, is_connected: true } : p,
+                ),
+              }
+            : s,
+        );
+      },
+    );
+
+    this.sub(
+      this.socket.on<{ participant_id: string }>('participant_removed'),
+      ({ participant_id }) => {
+        this.session.update((s) =>
+          s
+            ? {
+                ...s,
+                participants: s.participants.filter((p) => p.id !== participant_id),
+              }
+            : s,
+        );
+      },
+    );
+
+    this.sub(this.socket.on<Record<string, never>>('removed_from_session'), () => {
+      this.notice.set('You were removed from the session by the Moderator.');
+      this.clearSessionState();
+      this.router.navigate(['/']);
     });
 
     this.sub(this.socket.on<{ participant_id: string }>('vote_cast'), ({ participant_id }) => {
-      this.session.update(s => s ? {
-        ...s,
-        participants: s.participants.map(p =>
-          p.id === participant_id ? { ...p, has_voted: true } : p
-        ),
-      } : s);
+      this.session.update((s) =>
+        s
+          ? {
+              ...s,
+              participants: s.participants.map((p) =>
+                p.id === participant_id ? { ...p, has_voted: true } : p,
+              ),
+            }
+          : s,
+      );
     });
 
-    this.sub(this.socket.on<RoundResult>('votes_revealed'), result => {
+    this.sub(this.socket.on<RoundResult>('votes_revealed'), (result) => {
       this.lastResult.set(result);
-      this.session.update(s => s ? { ...s, status: 'revealed' } : s);
+      this.session.update((s) => (s ? { ...s, status: 'revealed' } : s));
     });
 
     this.sub(this.socket.on<{ round_number: number }>('round_reset'), ({ round_number }) => {
       this.lastResult.set(null);
-      this.session.update(s => s ? {
-        ...s,
-        status: 'voting',
-        round_number,
-        participants: s.participants.map(p => ({ ...p, has_voted: false })),
-      } : s);
+      this.session.update((s) =>
+        s
+          ? {
+              ...s,
+              status: 'voting',
+              round_number,
+              participants: s.participants.map((p) => ({ ...p, has_voted: false })),
+            }
+          : s,
+      );
     });
 
-    this.sub(this.socket.on<Story>('story_added'), story => {
-      this.session.update(s => s ? { ...s, stories: [...s.stories, story] } : s);
+    this.sub(this.socket.on<Story>('story_added'), (story) => {
+      this.session.update((s) => (s ? { ...s, stories: [...s.stories, story] } : s));
     });
 
     this.sub(this.socket.on<{ story_id: string }>('active_story_changed'), ({ story_id }) => {
-      this.session.update(s => s ? {
-        ...s,
-        current_story_id: story_id,
-        status: 'voting',
-        participants: s.participants.map(p => ({ ...p, has_voted: false })),
-        stories: s.stories.map(st => ({
-          ...st,
-          status: st.id === story_id ? 'active' : (st.status === 'active' ? 'pending' : st.status),
-        })),
-      } : s);
+      this.session.update((s) =>
+        s
+          ? {
+              ...s,
+              current_story_id: story_id,
+              status: 'voting',
+              participants: s.participants.map((p) => ({ ...p, has_voted: false })),
+              stories: s.stories.map((st) => ({
+                ...st,
+                status:
+                  st.id === story_id ? 'active' : st.status === 'active' ? 'pending' : st.status,
+              })),
+            }
+          : s,
+      );
       this.lastResult.set(null);
     });
 
-    this.sub(this.socket.on<Story>('story_finalized'), finalized => {
-      this.session.update(s => s ? {
-        ...s,
-        stories: s.stories.map(st => st.id === finalized.id ? finalized : st),
-        current_story_id: s.current_story_id === finalized.id ? null : s.current_story_id,
-        status: 'waiting',
-      } : s);
+    this.sub(this.socket.on<Story>('story_finalized'), (finalized) => {
+      this.session.update((s) =>
+        s
+          ? {
+              ...s,
+              stories: s.stories.map((st) => (st.id === finalized.id ? finalized : st)),
+              current_story_id: s.current_story_id === finalized.id ? null : s.current_story_id,
+              status: 'waiting',
+            }
+          : s,
+      );
     });
 
     this.sub(this.socket.on<{ new_sm_id: string }>('sm_transferred'), ({ new_sm_id }) => {
-      this.session.update(s => s ? {
-        ...s,
-        moderator_id: new_sm_id,
-        participants: s.participants.map(p => ({
-          ...p,
-          role: p.id === new_sm_id ? 'moderator' : (p.role === 'moderator' ? 'team_member' : p.role),
-        })),
-      } : s);
+      this.session.update((s) =>
+        s
+          ? {
+              ...s,
+              moderator_id: new_sm_id,
+              participants: s.participants.map((p) => ({
+                ...p,
+                role:
+                  p.id === new_sm_id
+                    ? 'moderator'
+                    : p.role === 'moderator'
+                      ? 'team_member'
+                      : p.role,
+              })),
+            }
+          : s,
+      );
     });
 
-    this.sub(this.socket.on<{ code: string; message: string }>('error'), err => {
+    this.sub(this.socket.on<{ code: string; message: string }>('error'), (err) => {
       this.error.set(err.message);
     });
   }
@@ -154,14 +212,23 @@ export class SessionService implements OnDestroy {
   // ---------------------------------------------------------------------------
   // Public actions
   // ---------------------------------------------------------------------------
-  createSession(name: string, display_name: string, voting_scale_id: VotingScaleId, session_mode: SessionMode = 'stories'): void {
+  createSession(
+    name: string,
+    display_name: string,
+    voting_scale_id: VotingScaleId,
+    session_mode: SessionMode = 'stories',
+  ): void {
     this.error.set(null);
     this.socket.connect();
     this.socket.emit('create_session', { name, display_name, voting_scale_id, session_mode });
     this.waitForSession();
   }
 
-  joinSession(session_id: string, display_name: string, role: 'team_member' | 'observer' = 'team_member'): void {
+  joinSession(
+    session_id: string,
+    display_name: string,
+    role: 'team_member' | 'observer' = 'team_member',
+  ): void {
     this.error.set(null);
     this.socket.connect();
     const stored = this.getStored();
@@ -198,21 +265,33 @@ export class SessionService implements OnDestroy {
     this.socket.emit('transfer_sm', { new_sm_id });
   }
 
+  removeParticipant(participant_id: string): void {
+    this.socket.emit('remove_participant', { participant_id });
+  }
+
   leaveSession(): void {
     this.socket.disconnect();
-    this.session.set(null);
-    this.myParticipantId.set(null);
-    this.lastResult.set(null);
-    this.error.set(null);
-    sessionStorage.removeItem(STORAGE_KEY);
+    this.clearSessionState();
     this.router.navigate(['/']);
+  }
+
+  dismissNotice(): void {
+    this.notice.set(null);
   }
 
   // ---------------------------------------------------------------------------
   // Helpers
   // ---------------------------------------------------------------------------
+  private clearSessionState(): void {
+    this.session.set(null);
+    this.myParticipantId.set(null);
+    this.lastResult.set(null);
+    this.error.set(null);
+    sessionStorage.removeItem(STORAGE_KEY);
+  }
+
   private waitForSession(): void {
-    const sub = this.socket.on<SessionState>('session_state').subscribe(state => {
+    const sub = this.socket.on<SessionState>('session_state').subscribe((state) => {
       this.router.navigate(['/room', state.id]);
       sub.unsubscribe();
     });
@@ -236,6 +315,6 @@ export class SessionService implements OnDestroy {
   }
 
   ngOnDestroy(): void {
-    this.subscriptions.forEach(s => s.unsubscribe());
+    this.subscriptions.forEach((s) => s.unsubscribe());
   }
 }
