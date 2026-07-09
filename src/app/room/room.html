@@ -13,6 +13,13 @@
       >
         Code: <strong>{{ s.id }}</strong> 📋
       </button>
+      <button
+        class="btn btn-outline-secondary btn-sm"
+        (click)="copyLink()"
+        title="Copy invite link"
+      >
+        Copy Link 🔗
+      </button>
     </div>
 
     @if (error()) {
@@ -226,6 +233,92 @@
         </div>
       </div>
     </div>
+  </div>
+} @else if (gateState() === 'gate') {
+  <div class="container py-5 min-vh-100 d-flex flex-column justify-content-center">
+    <div class="row justify-content-center">
+      <div class="col-12 col-sm-10 col-md-7 col-lg-5">
+        <h2 class="text-center mb-1">{{ gateSessionName() }}</h2>
+        <p class="text-center text-muted mb-4">
+          You've been invited to join this planning poker session.
+        </p>
+
+        @if (error()) {
+          <div class="alert alert-danger" role="alert">{{ error() }}</div>
+        }
+
+        <form (ngSubmit)="submitGate()">
+          <div class="mb-3">
+            <label for="gateDisplayName" class="form-label">Your name</label>
+            <input
+              id="gateDisplayName"
+              type="text"
+              class="form-control"
+              [(ngModel)]="gateDisplayName"
+              name="gateDisplayName"
+              [disabled]="gateAnonymous"
+              placeholder="Bob"
+              maxlength="100"
+              required
+            />
+          </div>
+          <div class="mb-3 form-check">
+            <input
+              class="form-check-input"
+              type="checkbox"
+              id="gateAnonymous"
+              [(ngModel)]="gateAnonymous"
+              name="gateAnonymous"
+              (change)="toggleGateAnonymous()"
+            />
+            <label class="form-check-label" for="gateAnonymous">Join anonymously</label>
+          </div>
+          <fieldset class="mb-4">
+            <legend class="form-label">Join as</legend>
+            <div class="form-check">
+              <input
+                class="form-check-input"
+                type="radio"
+                id="roleParticipant"
+                name="gateRole"
+                value="team_member"
+                [(ngModel)]="gateRole"
+              />
+              <label class="form-check-label" for="roleParticipant">
+                <strong>Participant</strong> — can vote
+              </label>
+            </div>
+            <div class="form-check">
+              <input
+                class="form-check-input"
+                type="radio"
+                id="roleSpectator"
+                name="gateRole"
+                value="observer"
+                [(ngModel)]="gateRole"
+              />
+              <label class="form-check-label" for="roleSpectator">
+                <strong>Spectator</strong> — observe only, no voting
+              </label>
+            </div>
+          </fieldset>
+          <button
+            type="submit"
+            class="btn btn-primary w-100"
+            [disabled]="!gateDisplayName.trim() || isConnecting()"
+          >
+            Join Session
+          </button>
+          <app-connection-status />
+        </form>
+      </div>
+    </div>
+  </div>
+} @else if (gateState() === 'not-found') {
+  <div class="d-flex flex-column justify-content-center align-items-center vh-100 gap-3 text-center px-3">
+    <h3>Session not found</h3>
+    <p class="text-muted mb-0">This invite link is invalid or the session has ended.</p>
+    <a routerLink="/" class="btn btn-primary">Back to Home</a>
   </div>
 } @else {
   <div class="d-flex justify-content-center align-items-center vh-100">

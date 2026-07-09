@@ -1,8 +1,18 @@
 import { Injectable, OnDestroy, signal, computed } from '@angular/core';
 import { Router } from '@angular/router';
+import { HttpClient } from '@angular/common/http';
 import { Observable, Subscription } from 'rxjs';
 import { SocketService } from './socket.service';
-import { SessionState, Participant, Story, RoundResult, SessionMode, VotingScaleId } from './types';
+import {
+  SessionState,
+  SessionPreview,
+  Participant,
+  Story,
+  RoundResult,
+  SessionMode,
+  VotingScaleId,
+} from './types';
+import { environment } from '../../environments/environment';
 
 const STORAGE_KEY = 'pp_participant';
 
@@ -34,6 +44,11 @@ export class SessionService implements OnDestroy {
 
   readonly isModerator = computed(() => this.me()?.role === 'moderator');
 
+  readonly isConnecting = computed(() => {
+    const s = this.socket.connectionStatus();
+    return s === 'connecting' || s === 'reconnecting';
+  });
+
   readonly currentStory = computed(() => {
     const s = this.session();
     if (!s?.current_story_id) return null;
@@ -43,6 +58,7 @@ export class SessionService implements OnDestroy {
   constructor(
     private socket: SocketService,
     private router: Router,
+    private http: HttpClient,
   ) {
     this.registerSocketEvents();
   }
@@ -277,6 +293,16 @@ export class SessionService implements OnDestroy {
 
   dismissNotice(): void {
     this.notice.set(null);
+  }
+
+  /** True if sessionStorage has a stored participant for this exact session (silent reconnect). */
+  hasStoredParticipant(session_id: string): boolean {
+    return this.getStored()?.session_id === session_id;
+  }
+
+  /** Public session metadata for the join gate — safe to call before connecting via socket. */
+  getSessionPreview(session_id: string): Observable<SessionPreview> {
+    return this.http.get<SessionPreview>(`${environment.serverUrl}/api/sessions/${session_id}`);
   }
 
   // ---------------------------------------------------------------------------

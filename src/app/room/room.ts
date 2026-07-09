@@ -1,14 +1,24 @@
-import { Component, OnInit, ViewChild } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
+import { Component, OnInit, ViewChild, signal } from '@angular/core';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { SessionService } from '../shared/session.service';
 import { ParticipantListComponent } from '../participant-list/participant-list';
 import { CardSelectorComponent } from '../card-selector/card-selector';
 import { ResultsPanelComponent } from '../results-panel/results-panel';
+import { ConnectionStatusComponent } from '../shared/connection-status/connection-status';
 import { FormsModule } from '@angular/forms';
+
+type GateState = 'checking' | 'reconnecting' | 'gate' | 'not-found';
 
 @Component({
   selector: 'app-room',
-  imports: [ParticipantListComponent, CardSelectorComponent, ResultsPanelComponent, FormsModule],
+  imports: [
+    ParticipantListComponent,
+    CardSelectorComponent,
+    ResultsPanelComponent,
+    ConnectionStatusComponent,
+    FormsModule,
+    RouterLink,
+  ],
   templateUrl: './room.html',
   styleUrl: './room.scss',
 })
@@ -21,10 +31,20 @@ export class RoomComponent implements OnInit {
   readonly currentStory;
   readonly lastResult;
   readonly error;
+  readonly isConnecting;
 
   // SM story form
   newStoryTitle = '';
   finalEstimate = '';
+
+  // Join gate
+  readonly gateState = signal<GateState>('checking');
+  readonly gateSessionName = signal<string | null>(null);
+  gateDisplayName = '';
+  gateAnonymous = false;
+  gateRole: 'team_member' | 'observer' = 'team_member';
+
+  private sessionId = '';
 
   constructor(
     private route: ActivatedRoute,
@@ -36,14 +56,45 @@ export class RoomComponent implements OnInit {
     this.currentStory = sessionService.currentStory;
     this.lastResult = sessionService.lastResult;
     this.error = sessionService.error;
+    this.isConnecting = sessionService.isConnecting;
   }
 
   ngOnInit(): void {
-    const sessionId = this.route.snapshot.paramMap.get('id') ?? '';
-    // Only rejoin if we have no live session state (e.g. page refresh).
-    if (!this.session() && sessionId) {
-      this.sessionService.joinSession(sessionId, 'Returning User');
+    this.sessionId = this.route.snapshot.paramMap.get('id') ?? '';
+
+    // Came from Home (already joined) — nothing to do, room renders as-is.
+    if (this.session() || !this.sessionId) return;
+
+    // Returning participant (page refresh) — reconnect silently, skip the gate.
+    if (this.sessionService.hasStoredParticipant(this.sessionId)) {
+      this.gateState.set('reconnecting');
+      this.sessionService.joinSession(this.sessionId, '');
+      return;
     }
+
+    // New visitor via invite link — show the join gate.
+    this.sessionService.getSessionPreview(this.sessionId).subscribe({
+      next: (preview) => {
+        this.gateSessionName.set(preview.name);
+        this.gateState.set('gate');
+      },
+      error: () => this.gateState.set('not-found'),
+    });
+  }
+
+  toggleGateAnonymous(): void {
+    if (this.gateAnonymous) {
+      const suffix = 1000 + Math.floor(Math.random() * 9000);
+      this.gateDisplayName = `Anonymous #${suffix}`;
+    } else {
+      this.gateDisplayName = '';
+    }
+  }
+
+  submitGate(): void {
+    const name = this.gateDisplayName.trim();
+    if (!name) return;
+    this.sessionService.joinSession(this.sessionId, name, this.gateRole);
   }
 
   onCardPicked(card: string): void {
@@ -82,6 +133,11 @@ export class RoomComponent implements OnInit {
   copyCode(): void {
     const code = this.session()?.id;
     if (code) navigator.clipboard.writeText(code);
+  }
+
+  copyLink(): void {
+    const code = this.session()?.id;
+    if (code) navigator.clipboard.writeText(`${location.origin}/room/${code}`);
   }
 
   removeParticipant(participant_id: string): void {
