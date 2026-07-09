@@ -18,7 +18,7 @@ export class HomeComponent {
   sessionName = '';
   createDisplayName = '';
   selectedScale: VotingScaleId = 'fibonacci';
-  selectedMode: SessionMode = 'stories';
+  selectedMode: SessionMode = 'free';
 
   // Join form
   sessionCode = '';
@@ -28,7 +28,10 @@ export class HomeComponent {
   readonly error;
   readonly isConnecting;
 
-  constructor(private sessionService: SessionService, socketService: SocketService) {
+  constructor(
+    private sessionService: SessionService,
+    socketService: SocketService,
+  ) {
     this.error = sessionService.error;
     this.isConnecting = computed(() => {
       const s = socketService.connectionStatus();
@@ -47,6 +50,10 @@ export class HomeComponent {
     const code = this.sessionCode.trim();
     const display_name = this.joinDisplayName.trim();
     if (!code || !display_name) return;
-    this.sessionService.joinSession(code, display_name, this.joinAsObserver ? 'observer' : 'team_member');
+    this.sessionService.joinSession(
+      code,
+      display_name,
+      this.joinAsObserver ? 'observer' : 'team_member',
+    );
   }
 }
