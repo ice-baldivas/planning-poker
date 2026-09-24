@@ -24,6 +24,7 @@ interface StoredParticipant {
 @Injectable({ providedIn: 'root' })
 export class SessionService implements OnDestroy {
   private subscriptions: Subscription[] = [];
+  private navigateToNextSession = false;
 
   // ---------------------------------------------------------------------------
   // State signals
@@ -76,6 +77,10 @@ export class SessionService implements OnDestroy {
       this.session.set({ ...state, auto_reveal: state.auto_reveal ?? false });
       this.voteRevision.update((revision) => revision + 1);
       this.lastResult.set(null);
+      if (this.navigateToNextSession) {
+        this.navigateToNextSession = false;
+        this.router.navigate(['/room', state.id]);
+      }
     });
 
     this.sub(this.socket.on<{ enabled: boolean }>('auto_reveal_changed'), ({ enabled }) => {
@@ -231,6 +236,7 @@ export class SessionService implements OnDestroy {
     });
 
     this.sub(this.socket.on<{ code: string; message: string }>('error'), (err) => {
+      this.navigateToNextSession = false;
       this.error.set(err.message);
     });
   }
@@ -245,9 +251,9 @@ export class SessionService implements OnDestroy {
     session_mode: SessionMode = 'stories',
   ): void {
     this.error.set(null);
+    this.navigateToNextSession = true;
     this.socket.connect();
     this.socket.emit('create_session', { name, display_name, voting_scale_id, session_mode });
-    this.waitForSession();
   }
 
   joinSession(
@@ -256,11 +262,11 @@ export class SessionService implements OnDestroy {
     role: 'team_member' | 'observer' = 'team_member',
   ): void {
     this.error.set(null);
+    this.navigateToNextSession = true;
     this.socket.connect();
     const stored = this.getStored();
     const participant_id = stored?.session_id === session_id ? stored.participant_id : undefined;
     this.socket.emit('join_session', { session_id, display_name, role, participant_id });
-    this.waitForSession();
   }
 
   castVote(card_value: string): void {
@@ -323,18 +329,12 @@ export class SessionService implements OnDestroy {
   // Helpers
   // ---------------------------------------------------------------------------
   private clearSessionState(): void {
+    this.navigateToNextSession = false;
     this.session.set(null);
     this.myParticipantId.set(null);
     this.lastResult.set(null);
     this.error.set(null);
     sessionStorage.removeItem(STORAGE_KEY);
-  }
-
-  private waitForSession(): void {
-    const sub = this.socket.on<SessionState>('session_state').subscribe((state) => {
-      this.router.navigate(['/room', state.id]);
-      sub.unsubscribe();
-    });
   }
 
   private sub<T>(obs: Observable<T>, handler: (v: T) => void): void {

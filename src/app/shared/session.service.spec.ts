@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
-import { provideRouter } from '@angular/router';
+import { provideRouter, Router } from '@angular/router';
 import { signal } from '@angular/core';
 import { Subject } from 'rxjs';
 import { vi } from 'vitest';
@@ -28,6 +28,7 @@ describe('SessionService table synchronization', () => {
   function setup() {
     const events = new Map<string, Subject<unknown>>();
     const emit = vi.fn();
+    const connect = vi.fn();
     TestBed.configureTestingModule({
       providers: [
         provideHttpClient(),
@@ -36,6 +37,7 @@ describe('SessionService table synchronization', () => {
           provide: SocketService,
           useValue: {
             connectionStatus: signal('connected'),
+            connect,
             emit,
             on: (name: string) => {
               if (!events.has(name)) events.set(name, new Subject());
@@ -46,9 +48,37 @@ describe('SessionService table synchronization', () => {
       ],
     });
     const service = TestBed.inject(SessionService);
+    const router = TestBed.inject(Router);
     events.get('session_state')!.next(state);
-    return { service, events, emit };
+    return { service, events, emit, connect, router };
   }
+
+  it('stores a new Stories moderator before navigating to the room', () => {
+    const { service, events, router } = setup();
+    const navigate = vi.spyOn(router, 'navigate').mockResolvedValue(true);
+    const storiesState: SessionState = {
+      ...state,
+      session_mode: 'stories',
+      status: 'waiting',
+      your_participant_id: 'mod',
+      participants: [
+        {
+          id: 'mod',
+          display_name: 'Moderator',
+          role: 'moderator',
+          is_connected: true,
+          has_voted: false,
+        },
+      ],
+    };
+
+    service.createSession('Stories', 'Moderator', 'fibonacci', 'stories');
+    events.get('session_state')!.next(storiesState);
+
+    expect(service.session()).toEqual(storiesState);
+    expect(service.isModerator()).toBe(true);
+    expect(navigate).toHaveBeenCalledWith(['/room', '123456']);
+  });
 
   it('requests settings without optimistic mutation and preserves replayed results on setting changes', () => {
     const { service, events, emit } = setup();
