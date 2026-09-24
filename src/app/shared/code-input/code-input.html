@@ -1,0 +1,19 @@
+<div class="code-input d-flex gap-2 justify-content-center" role="group" aria-label="Session code">
+  @for (i of digitIndexes; track i) {
+    <input
+      #digitInput
+      type="text"
+      inputmode="numeric"
+      autocomplete="one-time-code"
+      class="form-control text-center fs-4 fw-bold"
+      maxlength="1"
+      [attr.aria-label]="'Digit ' + (i + 1)"
+      [value]="digits()[i]"
+      [disabled]="disabled()"
+      (input)="onInput(i, $event)"
+      (keydown)="onKeydown(i, $event)"
+      (paste)="onPaste($event)"
+      (focus)="onFocus($event)"
+    />
+  }
+</div>

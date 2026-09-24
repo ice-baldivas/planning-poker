@@ -142,27 +142,16 @@
       @if (tab() === 'join') {
         <form (ngSubmit)="joinSession()">
           <div class="mb-3">
-            <label for="sessionCode" class="form-label">Session code</label>
-            <input
-              id="sessionCode"
-              type="text"
-              class="form-control text-center fs-4 fw-bold letter-spacing"
-              [(ngModel)]="sessionCode"
-              name="sessionCode"
-              maxlength="6"
-              pattern="[0-9]{6}"
-              inputmode="numeric"
-              required
-            />
+            <app-code-input [(ngModel)]="sessionCode" name="sessionCode" required />
           </div>
           <div class="mb-3">
-            <label for="joinDisplayName" class="form-label">Your name</label>
             <input
               id="joinDisplayName"
               type="text"
-              class="form-control"
+              class="form-control text-center"
               [(ngModel)]="joinDisplayName"
               name="joinDisplayName"
+              placeholder="Your name"
               required
               maxlength="100"
             />
@@ -175,7 +164,7 @@
               [(ngModel)]="joinAsObserver"
               name="joinAsObserver"
             />
-            <label class="form-check-label" for="observer">Join as observer (no voting)</label>
+            <label class="form-check-label" for="observer">Join as spectator</label>
           </div>
           <button
             type="submit"

@@ -5,10 +5,11 @@ import { SocketService } from '../shared/socket.service';
 import { SessionMode, VotingScaleId } from '../shared/types';
 import { ConnectionStatusComponent } from '../shared/connection-status/connection-status';
 import { InfoToggleComponent } from '../shared/info-toggle/info-toggle';
+import { CodeInputComponent } from '../shared/code-input/code-input';
 
 @Component({
   selector: 'app-home',
-  imports: [FormsModule, ConnectionStatusComponent, InfoToggleComponent],
+  imports: [FormsModule, ConnectionStatusComponent, InfoToggleComponent, CodeInputComponent],
   templateUrl: './home.html',
   styleUrl: './home.scss',
 })
