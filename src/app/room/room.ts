@@ -4,8 +4,8 @@ import { SessionService } from '../shared/session.service';
 import { ParticipantListComponent } from '../participant-list/participant-list';
 import { CardSelectorComponent } from '../card-selector/card-selector';
 import { ResultsPanelComponent } from '../results-panel/results-panel';
-import { ConnectionStatusComponent } from '../shared/connection-status/connection-status';
 import { FormsModule } from '@angular/forms';
+import { GateComponent } from '../gate/gate';
 
 type GateState = 'checking' | 'reconnecting' | 'gate' | 'not-found';
 
@@ -15,9 +15,9 @@ type GateState = 'checking' | 'reconnecting' | 'gate' | 'not-found';
     ParticipantListComponent,
     CardSelectorComponent,
     ResultsPanelComponent,
-    ConnectionStatusComponent,
     FormsModule,
     RouterLink,
+    GateComponent,
   ],
   templateUrl: './room.html',
   styleUrl: './room.scss',
@@ -40,9 +40,6 @@ export class RoomComponent implements OnInit {
   // Join gate
   readonly gateState = signal<GateState>('checking');
   readonly gateSessionName = signal<string | null>(null);
-  gateDisplayName = '';
-  gateAnonymous = false;
-  gateRole: 'team_member' | 'observer' = 'team_member';
 
   private sessionId = '';
 
@@ -82,19 +79,8 @@ export class RoomComponent implements OnInit {
     });
   }
 
-  toggleGateAnonymous(): void {
-    if (this.gateAnonymous) {
-      const suffix = 1000 + Math.floor(Math.random() * 9000);
-      this.gateDisplayName = `Anonymous #${suffix}`;
-    } else {
-      this.gateDisplayName = '';
-    }
-  }
-
-  submitGate(): void {
-    const name = this.gateDisplayName.trim();
-    if (!name) return;
-    this.sessionService.joinSession(this.sessionId, name, this.gateRole);
+  onGateJoin(payload: { displayName: string; role: 'team_member' | 'observer' }): void {
+    this.sessionService.joinSession(this.sessionId, payload.displayName, payload.role);
   }
 
   onCardPicked(card: string): void {
