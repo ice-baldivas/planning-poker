@@ -1,0 +1,42 @@
+:host {
+  display: inline-flex;
+}
+
+.info-toggle {
+  position: relative;
+  display: inline-flex;
+}
+
+.info-toggle-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  color: var(--bs-secondary-color);
+  text-decoration: none;
+}
+
+.info-toggle-button:hover,
+.info-toggle-button:focus-visible {
+  color: var(--bs-primary);
+}
+
+.info-toggle-panel {
+  position: absolute;
+  top: calc(100% + 0.35rem);
+  right: 0;
+  z-index: 10;
+  pointer-events: none;
+  width: max-content;
+  max-width: min(16rem, calc(100vw - 2rem));
+  padding: 0.65rem 0.75rem;
+  color: var(--bs-body-color);
+  background: var(--bs-body-bg);
+  border: 1px solid var(--bs-border-color);
+  border-radius: var(--bs-border-radius);
+  box-shadow: var(--bs-box-shadow-sm);
+  font-size: 0.875rem;
+  line-height: 1.4;
+}
