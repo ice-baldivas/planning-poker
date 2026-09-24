@@ -96,6 +96,9 @@
     border-style: dashed;
   }
 }
+.avatar > .bi:not(.vote-check)::before {
+  display: block;
+}
 .vote-check {
   position: absolute;
   right: -0.25rem;

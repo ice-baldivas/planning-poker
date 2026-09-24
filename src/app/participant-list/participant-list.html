@@ -10,9 +10,9 @@
       } @else if (p.id === moderatorId()) {
         <span class="badge bg-primary text-light" title="Moderator">Mod</span>
       } @else if (p.role === 'observer') {
-        <span class="badge bg-info text-dark" title="Observer">👁</span>
+        <span class="badge bg-primary text-light" title="Observer">Spectator</span>
       } @else {
-        <span class="badge bg-success text-white" title="Team Member">●</span>
+        <span class="badge bg-primary text-light" title="Team Member">Participant</span>
       }
 
       <!-- Name -->
@@ -23,7 +23,7 @@
         @if (p.has_voted) {
           <span class="text-success" aria-label="Voted" title="Voted">✓</span>
         } @else {
-          <span class="text-muted" aria-label="Waiting" title="Waiting…">…</span>
+          <span class="text-muted" aria-label="Waiting" title="Waiting…">Voting</span>
         }
       }
 

@@ -7,13 +7,13 @@
       } @else if (status() === 'voting') {
         <span class="table-label">Voting</span>
         <strong>{{ votedCount() }} / {{ voters().length }}</strong>
-        <span class="text-body-secondary small">votes in</span>
       } @else if (status() === 'revealed') {
         <span class="table-label">Round revealed</span>
       } @else {
         <i class="bi bi-suit-spade table-emblem" aria-hidden="true"></i>
         <span class="table-label">Waiting for a story</span>
       }
+      <ng-content select="[table-controls]" />
     </div>
 
     <div class="seats" role="list" aria-label="Voters">
@@ -87,7 +87,7 @@
   @if (spectators().length) {
     <aside class="spectators" aria-label="Spectators">
       <h3>
-        Spectators <span>{{ spectators().length }}</span>
+        Spectators: <span>{{ spectators().length }}</span>
       </h3>
       <div class="spectator-list">
         @for (person of spectators(); track person.id) {

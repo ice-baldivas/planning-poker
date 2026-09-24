@@ -38,7 +38,10 @@ describe('RoomComponent', () => {
             session,
             me,
             isModerator: computed(() => me().role === 'moderator'),
-            currentStory: signal(null),
+            currentStory: computed(
+              () =>
+                session().stories.find((story) => story.id === session().current_story_id) ?? null,
+            ),
             lastResult: signal(null),
             error: signal(null),
             isConnecting: signal(false),
@@ -60,6 +63,7 @@ describe('RoomComponent', () => {
       expect(element.querySelector('h2')?.textContent?.trim()).toBe('Round 1');
       expect(!!element.querySelector('app-card-selector')).toBe(role !== 'observer');
       expect(!!element.querySelector('.moderator-controls')).toBe(role === 'moderator');
+      expect(!!element.querySelector('.poker-table [table-controls]')).toBe(role === 'moderator');
       expect(!!element.querySelector('.participant-management')).toBe(role === 'moderator');
       expect(element.querySelector('.session-actions')?.textContent).toContain('Leave Session');
       expect(element.querySelector('.session-actions')?.textContent).toContain('Copy Link');
@@ -84,6 +88,53 @@ describe('RoomComponent', () => {
     }));
     await fixture.whenStable();
     expect(element.querySelector('.moderator-controls')).toBeNull();
+    expect(element.querySelector('[table-controls]')).toBeNull();
+  });
+
+  it('reveals and advances free rounds from the table without opening the drawer', async () => {
+    const { element, fixture, actions, session } = await render('moderator');
+    const buttons = element.querySelectorAll<HTMLButtonElement>(
+      '.poker-table [table-controls] button',
+    );
+    expect(element.querySelector('dialog')?.open).toBe(false);
+    expect(buttons[0].disabled).toBe(false);
+    expect(buttons[1].disabled).toBe(true);
+    buttons[0].click();
+    expect(actions.revealVotes).toHaveBeenCalledOnce();
+    session.update((value) => ({ ...value, status: 'revealed' }));
+    await fixture.whenStable();
+    expect(buttons[0].disabled).toBe(true);
+    expect(buttons[1].disabled).toBe(false);
+    expect(buttons[1].textContent).toContain('Next Round');
+    buttons[1].click();
+    expect(actions.resetRound).toHaveBeenCalledOnce();
+  });
+
+  it('preserves story-mode reveal and reset guards on the table', async () => {
+    const { element, fixture, actions, session } = await render('moderator', 'stories');
+    const buttons = element.querySelectorAll<HTMLButtonElement>(
+      '.poker-table [table-controls] button',
+    );
+    expect(buttons[0].disabled).toBe(true);
+    expect(buttons[1].disabled).toBe(true);
+    expect(buttons[1].textContent).toContain('Reset Round');
+    session.update((value) => ({ ...value, status: 'voting' }));
+    await fixture.whenStable();
+    expect(buttons[0].disabled).toBe(true);
+    session.update((value) => ({
+      ...value,
+      current_story_id: 'story',
+      stories: [{ id: 'story', title: 'Story', status: 'active' }],
+    }));
+    await fixture.whenStable();
+    expect(buttons[0].disabled).toBe(false);
+    expect(buttons[1].disabled).toBe(false);
+    buttons[1].click();
+    expect(actions.resetRound).toHaveBeenCalledOnce();
+    session.update((value) => ({ ...value, status: 'revealed' }));
+    await fixture.whenStable();
+    expect(buttons[0].disabled).toBe(true);
+    expect(buttons[1].disabled).toBe(false);
   });
 
   it('allows the switch default action inside the drawer and requests a setting change', async () => {

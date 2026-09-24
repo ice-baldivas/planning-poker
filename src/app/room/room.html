@@ -25,7 +25,12 @@
           <p class="story-description">{{ description }}</p>
         }
       </div>
-      <span class="room-status" [class.text-success]="s.status === 'revealed'">{{ s.status }}</span>
+      <!-- <span
+        >Room Status:
+        <span class="room-status" [class.text-success]="s.status === 'revealed'">{{
+          s.status
+        }}</span>
+      </span> -->
     </header>
     @if (error()) {
       <div class="alert alert-danger" role="alert">{{ error() }}</div>
@@ -35,7 +40,31 @@
       [status]="s.status"
       [myParticipantId]="me()?.id ?? null"
       [result]="lastResult()"
-    />
+    >
+      @if (isModerator()) {
+        <div table-controls class="d-grid gap-2 mt-2" role="group" aria-label="Round controls">
+          <button
+            type="button"
+            class="btn btn-success btn-sm"
+            [disabled]="s.status !== 'voting' || (s.session_mode === 'stories' && !currentStory())"
+            (click)="reveal()"
+          >
+            <i class="bi bi-eye" aria-hidden="true"></i> Reveal Votes
+          </button>
+          <button
+            type="button"
+            class="btn btn-outline-secondary btn-sm"
+            [disabled]="
+              s.session_mode === 'free' ? s.status !== 'revealed' : s.status === 'waiting'
+            "
+            (click)="reset()"
+          >
+            <i class="bi bi-arrow-repeat" aria-hidden="true"></i>
+            {{ s.session_mode === 'free' ? 'Next Round' : 'Reset Round' }}
+          </button>
+        </div>
+      }
+    </app-poker-table>
     @if (me(); as participant) {
       @if (participant.role !== 'observer') {
         <section class="voting-deck" aria-label="Your voting cards">
@@ -60,7 +89,7 @@
     >
       <div class="drawer-content">
         <header class="drawer-header">
-          <h2 id="controls-title">Session controls</h2>
+          <h2 id="controls-title">{{ s.name }}</h2>
           <button
             type="button"
             class="btn btn-outline-secondary icon-button"
@@ -91,7 +120,7 @@
         <div class="copy-notice small text-body-secondary" role="status">{{ copyNotice() }}</div>
         @if (isModerator()) {
           <section class="moderator-controls" aria-labelledby="moderator-title">
-            <h3 id="moderator-title">Moderator</h3>
+            <h3 id="moderator-title">Moderator Controls</h3>
             <div class="form-check form-switch mb-3">
               <input
                 #autoReveal
