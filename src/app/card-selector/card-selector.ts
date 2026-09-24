@@ -1,4 +1,4 @@
-import { Component, input, output, signal } from '@angular/core';
+import { Component, effect, input, output, signal } from '@angular/core';
 
 @Component({
   selector: 'app-card-selector',
@@ -9,9 +9,17 @@ import { Component, input, output, signal } from '@angular/core';
 export class CardSelectorComponent {
   cards = input.required<string[]>();
   disabled = input<boolean>(false);
+  resetRevision = input(0);
 
   selected = signal<string | null>(null);
   cardPicked = output<string>();
+
+  constructor() {
+    effect(() => {
+      this.resetRevision();
+      this.reset();
+    });
+  }
 
   selectCard(card: string): void {
     if (this.disabled()) return;

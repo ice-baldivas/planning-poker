@@ -1,239 +1,226 @@
 @if (session(); as s) {
-  <div class="container-fluid py-3">
-    <!-- Header -->
-    <div class="d-flex flex-wrap align-items-center gap-2 mb-3 px-2">
-      <h2 class="mb-0 me-auto text-truncate">{{ s.name }}</h2>
-      <button class="btn btn-outline-secondary btn-sm" (click)="leaveSession()">
-        Leave Session
-      </button>
+  <main class="room">
+    <header class="room-header">
       <button
-        class="btn btn-outline-secondary btn-sm"
-        (click)="copyCode()"
-        title="Copy session code"
+        type="button"
+        class="btn btn-outline-secondary menu-trigger"
+        (click)="openMenu(controls)"
+        aria-label="Session controls"
+        title="Session controls"
+        aria-controls="room-controls"
+        [attr.aria-expanded]="menuOpen()"
       >
-        Code: <strong>{{ s.id }}</strong> 📋
+        <i class="bi bi-layout-sidebar-inset" aria-hidden="true"></i>
       </button>
-      <button
-        class="btn btn-outline-secondary btn-sm"
-        (click)="copyLink()"
-        title="Copy invite link"
-      >
-        Copy Link 🔗
-      </button>
-    </div>
-
+      <div class="room-heading">
+        <h1>{{ s.name }}</h1>
+        <h2>
+          {{
+            s.session_mode === 'free'
+              ? 'Round ' + s.round_number
+              : (currentStory()?.title ?? 'No active story')
+          }}
+        </h2>
+        @if (currentStory()?.description; as description) {
+          <p class="story-description">{{ description }}</p>
+        }
+      </div>
+      <span class="room-status" [class.text-success]="s.status === 'revealed'">{{ s.status }}</span>
+    </header>
     @if (error()) {
-      <div class="alert alert-danger mx-2">{{ error() }}</div>
+      <div class="alert alert-danger" role="alert">{{ error() }}</div>
     }
-
-    <div class="row g-3 px-2">
-      <!-- Main column -->
-      <div class="col-12 col-lg-8 d-flex flex-column gap-3">
-        <!-- Current story (Story Mode only) -->
-        @if (s.session_mode === 'stories') {
-          <div class="card">
-            <div class="card-body">
-              @if (currentStory(); as story) {
-                <h5 class="card-title mb-1">{{ story.title }}</h5>
-                @if (story.description) {
-                  <p class="text-muted small mb-2">{{ story.description }}</p>
-                }
-                <span
-                  class="badge"
-                  [class.bg-primary]="s.status === 'voting'"
-                  [class.bg-success]="s.status === 'revealed'"
-                  [class.bg-secondary]="s.status === 'waiting'"
-                >
-                  {{ s.status }}
-                </span>
-              } @else {
-                <p class="text-muted mb-0">
-                  No active story. Waiting for the Moderator to start a round.
-                </p>
-              }
+    <app-poker-table
+      [participants]="s.participants"
+      [status]="s.status"
+      [myParticipantId]="me()?.id ?? null"
+      [result]="lastResult()"
+    />
+    @if (me(); as participant) {
+      @if (participant.role !== 'observer') {
+        <section class="voting-deck" aria-label="Your voting cards">
+          <h3>Your vote</h3>
+          <app-card-selector
+            [cards]="s.voting_scale.cards"
+            [disabled]="s.status !== 'voting' || (s.session_mode === 'stories' && !currentStory())"
+            [resetRevision]="sessionService.voteRevision()"
+            (cardPicked)="onCardPicked($event)"
+          />
+        </section>
+      }
+    }
+    <dialog
+      #controls
+      id="room-controls"
+      class="controls-drawer"
+      aria-labelledby="controls-title"
+      (close)="menuOpen.set(false)"
+      (cancel)="menuOpen.set(false)"
+      (click)="onBackdropClick($event, controls)"
+    >
+      <div class="drawer-content">
+        <header class="drawer-header">
+          <h2 id="controls-title">Session controls</h2>
+          <button
+            type="button"
+            class="btn btn-outline-secondary icon-button"
+            (click)="closeMenu(controls)"
+            aria-label="Close controls"
+            title="Close controls"
+            autofocus
+          >
+            <i class="bi bi-x-lg" aria-hidden="true"></i>
+          </button>
+        </header>
+        <div class="session-actions">
+          <button
+            type="button"
+            class="btn btn-outline-secondary"
+            (click)="copyCode()"
+            title="Copy session code"
+          >
+            <i class="bi bi-clipboard" aria-hidden="true"></i> Code: <strong>{{ s.id }}</strong>
+          </button>
+          <button type="button" class="btn btn-outline-secondary" (click)="copyLink()">
+            <i class="bi bi-link-45deg" aria-hidden="true"></i> Copy Link
+          </button>
+          <button type="button" class="btn btn-outline-danger" (click)="leaveSession()">
+            <i class="bi bi-box-arrow-left" aria-hidden="true"></i> Leave Session
+          </button>
+        </div>
+        <div class="copy-notice small text-body-secondary" role="status">{{ copyNotice() }}</div>
+        @if (isModerator()) {
+          <section class="moderator-controls" aria-labelledby="moderator-title">
+            <h3 id="moderator-title">Moderator</h3>
+            <div class="form-check form-switch mb-3">
+              <input
+                #autoReveal
+                class="form-check-input"
+                type="checkbox"
+                role="switch"
+                id="auto-reveal"
+                [checked]="s.auto_reveal"
+                (change)="
+                  sessionService.setAutoReveal(autoReveal.checked);
+                  autoReveal.checked = s.auto_reveal
+                "
+              />
+              <label class="form-check-label" for="auto-reveal">Auto-reveal</label>
             </div>
-          </div>
-        }
-
-        <!-- Round indicator (Free Round Mode only) -->
-        @if (s.session_mode === 'free') {
-          <div class="card">
-            <div class="card-body d-flex align-items-center gap-3">
-              <span class="fs-5 fw-semibold">Round {{ s.round_number }}</span>
-              <span
-                class="badge"
-                [class.bg-primary]="s.status === 'voting'"
-                [class.bg-success]="s.status === 'revealed'"
-                [class.bg-secondary]="s.status === 'waiting'"
-              >
-                {{ s.status }}
-              </span>
-            </div>
-          </div>
-        }
-
-        <!-- Voting cards (team members only, while voting) -->
-        @if (me()?.role !== 'observer') {
-          <div class="card">
-            <div class="card-body">
-              <h6 class="card-subtitle mb-3 text-muted">Your vote</h6>
-              <app-card-selector
-                [cards]="s.voting_scale.cards"
+            <div class="d-flex gap-2 flex-wrap mb-3">
+              <button
+                type="button"
+                class="btn btn-success"
                 [disabled]="
                   s.status !== 'voting' || (s.session_mode === 'stories' && !currentStory())
                 "
-                (cardPicked)="onCardPicked($event)"
-              />
+                (click)="reveal()"
+              >
+                <i class="bi bi-eye" aria-hidden="true"></i> Reveal Votes
+              </button>
+              <button
+                type="button"
+                class="btn btn-outline-secondary"
+                [disabled]="
+                  s.session_mode === 'free' ? s.status !== 'revealed' : s.status === 'waiting'
+                "
+                (click)="reset()"
+              >
+                <i class="bi bi-arrow-repeat" aria-hidden="true"></i>
+                {{ s.session_mode === 'free' ? 'Next Round' : 'Reset Round' }}
+              </button>
             </div>
-          </div>
-        }
-
-        <!-- Results panel (post-reveal) -->
-        @if (s.status === 'revealed' && lastResult()) {
-          <div class="card">
-            <div class="card-body">
-              <h6 class="card-subtitle mb-3 text-muted">Results</h6>
-              <app-results-panel [result]="lastResult()!" />
-            </div>
-          </div>
-        }
-
-        <!-- SM controls -->
-        @if (isModerator()) {
-          <div class="card border-primary">
-            <div class="card-header bg-primary text-light fw-semibold">Moderator Controls</div>
-            <div class="card-body d-flex flex-column gap-3">
-              @if (s.session_mode === 'free') {
-                <!-- Free Round Mode: reveal + reset only -->
-                <div class="d-flex gap-2 flex-wrap">
-                  <button
-                    class="btn btn-success"
-                    [disabled]="s.status !== 'voting'"
-                    (click)="reveal()"
-                  >
-                    Reveal Votes
-                  </button>
-                  <button
-                    class="btn btn-outline-secondary"
-                    [disabled]="s.status !== 'revealed'"
-                    (click)="reset()"
-                  >
-                    Next Round
-                  </button>
-                </div>
-              } @else {
-                <!-- Story Mode: reveal, reset, finalize, add story, queue -->
-                <div class="d-flex gap-2 flex-wrap">
-                  <button
-                    class="btn btn-success"
-                    [disabled]="s.status !== 'voting' || !currentStory()"
-                    (click)="reveal()"
-                  >
-                    Reveal Votes
-                  </button>
-                  <button
-                    class="btn btn-outline-secondary"
-                    [disabled]="s.status === 'waiting'"
-                    (click)="reset()"
-                  >
-                    Reset Round
-                  </button>
-                </div>
-
-                @if (s.status === 'revealed' && currentStory()) {
-                  <div class="input-group">
-                    <input
-                      type="text"
-                      class="form-control"
-                      [(ngModel)]="finalEstimate"
-                      name="finalEstimate"
-                      placeholder="Final estimate…"
-                      maxlength="20"
-                    />
-                    <button
-                      class="btn btn-primary"
-                      [disabled]="!finalEstimate.trim()"
-                      (click)="finalize()"
-                    >
-                      Finalize Story
-                    </button>
-                  </div>
-                }
-
-                <div class="input-group">
+            @if (s.session_mode === 'stories') {
+              @if (s.status === 'revealed' && currentStory()) {
+                <label for="final-estimate" class="form-label small">Final estimate</label>
+                <div class="input-group mb-3">
                   <input
+                    id="final-estimate"
                     type="text"
                     class="form-control"
-                    [(ngModel)]="newStoryTitle"
-                    name="newStoryTitle"
-                    placeholder="New story title…"
-                    maxlength="100"
-                    (keydown.enter)="addStory()"
+                    [(ngModel)]="finalEstimate"
+                    name="finalEstimate"
+                    maxlength="20"
+                    (keydown.enter)="finalize()"
                   />
                   <button
-                    class="btn btn-outline-primary"
-                    [disabled]="!newStoryTitle.trim()"
-                    (click)="addStory()"
+                    type="button"
+                    class="btn btn-primary"
+                    [disabled]="!finalEstimate.trim()"
+                    (click)="finalize()"
                   >
-                    Add Story
+                    Finalize Story
                   </button>
                 </div>
-
-                @if (s.stories.length > 0) {
-                  <ul class="list-group">
-                    @for (story of s.stories; track story.id) {
-                      <li
-                        class="list-group-item d-flex justify-content-between align-items-center gap-2"
-                      >
-                        <span class="text-truncate flex-grow-1">{{ story.title }}</span>
-                        <span
-                          class="badge"
-                          [class.bg-success]="story.status === 'estimated'"
-                          [class.bg-primary]="story.status === 'active'"
-                          [class.bg-secondary]="story.status === 'pending'"
-                        >
-                          {{
-                            story.status === 'estimated'
-                              ? (story.final_estimate ?? '?')
-                              : story.status
-                          }}
-                        </span>
-                        @if (story.status === 'pending') {
-                          <button
-                            class="btn btn-sm btn-outline-primary"
-                            (click)="setActive(story.id)"
-                          >
-                            Start
-                          </button>
-                        }
-                      </li>
-                    }
-                  </ul>
-                }
               }
-            </div>
-          </div>
-        }
-      </div>
-
-      <!-- Sidebar: participants -->
-      <div class="col-12 col-lg-4">
-        <div class="card h-100">
-          <div class="card-header">Participants ({{ s.participants.length }})</div>
-          <div class="card-body p-0">
+              <label for="new-story" class="form-label small">New story</label>
+              <div class="input-group mb-3">
+                <input
+                  id="new-story"
+                  type="text"
+                  class="form-control"
+                  [(ngModel)]="newStoryTitle"
+                  name="newStoryTitle"
+                  maxlength="100"
+                  (keydown.enter)="addStory()"
+                />
+                <button
+                  type="button"
+                  class="btn btn-outline-primary"
+                  [disabled]="!newStoryTitle.trim()"
+                  (click)="addStory()"
+                  aria-label="Add story"
+                  title="Add story"
+                >
+                  <i class="bi bi-plus-lg" aria-hidden="true"></i>
+                </button>
+              </div>
+              @if (s.stories.length) {
+                <ul class="story-queue list-unstyled">
+                  @for (story of s.stories; track story.id) {
+                    <li>
+                      <span class="story-title">{{ story.title }}</span>
+                      <span
+                        class="badge"
+                        [class.bg-success]="story.status === 'estimated'"
+                        [class.bg-primary]="story.status === 'active'"
+                        [class.bg-secondary]="story.status === 'pending'"
+                        >{{
+                          story.status === 'estimated'
+                            ? (story.final_estimate ?? '?')
+                            : story.status
+                        }}</span
+                      >
+                      @if (story.status === 'pending') {
+                        <button
+                          type="button"
+                          class="btn btn-sm btn-outline-primary"
+                          (click)="setActive(story.id)"
+                        >
+                          Start
+                        </button>
+                      }
+                    </li>
+                  }
+                </ul>
+              }
+            }
+          </section>
+          <section class="participant-management" aria-labelledby="participants-title">
+            <h3 id="participants-title">Participants ({{ s.participants.length }})</h3>
             <app-participant-list
               [participants]="s.participants"
               [sessionStatus]="s.status"
               [moderatorId]="s.moderator_id"
-              [isModerator]="isModerator()"
+              [isModerator]="true"
               [myParticipantId]="me()?.id ?? null"
               (remove)="removeParticipant($event)"
             />
-          </div>
-        </div>
+          </section>
+        }
       </div>
-    </div>
-  </div>
+    </dialog>
+  </main>
 } @else if (gateState() === 'gate') {
   <app-gate
     [sessionName]="gateSessionName()"

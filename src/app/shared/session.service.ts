@@ -31,6 +31,7 @@ export class SessionService implements OnDestroy {
   readonly session = signal<SessionState | null>(null);
   readonly myParticipantId = signal<string | null>(null);
   readonly lastResult = signal<RoundResult | null>(null);
+  readonly voteRevision = signal(0);
   readonly error = signal<string | null>(null);
   /** Transient notice (e.g. "you were removed") that must survive navigation to Home. */
   readonly notice = signal<string | null>(null);
@@ -72,8 +73,13 @@ export class SessionService implements OnDestroy {
         this.myParticipantId.set(state.your_participant_id);
         this.persist({ session_id: state.id, participant_id: state.your_participant_id });
       }
-      this.session.set(state);
+      this.session.set({ ...state, auto_reveal: state.auto_reveal ?? false });
+      this.voteRevision.update((revision) => revision + 1);
       this.lastResult.set(null);
+    });
+
+    this.sub(this.socket.on<{ enabled: boolean }>('auto_reveal_changed'), ({ enabled }) => {
+      this.session.update((session) => (session ? { ...session, auto_reveal: enabled } : session));
     });
 
     this.sub(this.socket.on<Participant>('participant_joined'), (p) => {
@@ -151,6 +157,7 @@ export class SessionService implements OnDestroy {
     });
 
     this.sub(this.socket.on<{ round_number: number }>('round_reset'), ({ round_number }) => {
+      this.voteRevision.update((revision) => revision + 1);
       this.lastResult.set(null);
       this.session.update((s) =>
         s
@@ -169,6 +176,7 @@ export class SessionService implements OnDestroy {
     });
 
     this.sub(this.socket.on<{ story_id: string }>('active_story_changed'), ({ story_id }) => {
+      this.voteRevision.update((revision) => revision + 1);
       this.session.update((s) =>
         s
           ? {
@@ -188,6 +196,8 @@ export class SessionService implements OnDestroy {
     });
 
     this.sub(this.socket.on<Story>('story_finalized'), (finalized) => {
+      this.voteRevision.update((revision) => revision + 1);
+      this.lastResult.set(null);
       this.session.update((s) =>
         s
           ? {
@@ -259,6 +269,10 @@ export class SessionService implements OnDestroy {
 
   revealVotes(): void {
     this.socket.emit('reveal_votes');
+  }
+
+  setAutoReveal(enabled: boolean): void {
+    this.socket.emit('set_auto_reveal', { enabled });
   }
 
   resetRound(): void {

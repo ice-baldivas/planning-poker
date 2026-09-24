@@ -1,0 +1,112 @@
+<div class="table-layout" [class.has-spectators]="spectators().length > 0">
+  <section class="poker-table" aria-label="Poker table">
+    <div class="table-surface" aria-hidden="true"></div>
+    <div class="table-summary" aria-live="polite">
+      @if (publicResult(); as revealed) {
+        <app-results-panel [result]="revealed" [summaryOnly]="true" />
+      } @else if (status() === 'voting') {
+        <span class="table-label">Voting</span>
+        <strong>{{ votedCount() }} / {{ voters().length }}</strong>
+        <span class="text-body-secondary small">votes in</span>
+      } @else if (status() === 'revealed') {
+        <span class="table-label">Round revealed</span>
+      } @else {
+        <i class="bi bi-suit-spade table-emblem" aria-hidden="true"></i>
+        <span class="table-label">Waiting for a story</span>
+      }
+    </div>
+
+    <div class="seats" role="list" aria-label="Voters">
+      @for (person of voters(); track person.id) {
+        <div class="seat" role="listitem" [attr.data-participant-id]="person.id">
+          <div class="seat-person">
+            <div
+              class="avatar"
+              [class.voted]="person.has_voted && status() !== 'waiting'"
+              [class.away]="!person.is_connected"
+            >
+              <i class="bi bi-person-fill" aria-hidden="true"></i>
+              @if (person.has_voted && status() !== 'waiting') {
+                <i class="bi bi-check-circle-fill vote-check" aria-label="Voted"></i>
+              }
+            </div>
+            <span class="seat-name">{{ person.display_name }}</span>
+            <span class="seat-detail">
+              @if (person.id === myParticipantId()) {
+                <span>You</span>
+              }
+              @if (person.role === 'moderator') {
+                <span>Moderator</span>
+              }
+              @if (!person.is_connected) {
+                <span class="away-label">Away</span>
+              }
+            </span>
+          </div>
+          <div class="card-position">
+            @if (status() === 'revealed') {
+              @if (values().get(person.id); as value) {
+                <div
+                  class="table-card face-up"
+                  [attr.aria-label]="person.display_name + ': ' + value"
+                >
+                  <span>{{ value }}</span>
+                </div>
+              } @else {
+                <span class="no-vote">No vote</span>
+              }
+            } @else if (status() === 'voting' && person.has_voted) {
+              <div
+                class="table-card face-down"
+                [attr.aria-label]="person.display_name + ' voted; card hidden'"
+              >
+                <i class="bi bi-suit-spade-fill" aria-hidden="true"></i>
+              </div>
+            } @else {
+              <span
+                class="card-placeholder"
+                [attr.aria-label]="person.display_name + ': waiting'"
+              ></span>
+            }
+          </div>
+        </div>
+      }
+    </div>
+
+    @if (departedVotes().length) {
+      <div class="departed-results" aria-label="Votes from former participants">
+        @for (vote of departedVotes(); track vote.participant_id) {
+          <span
+            >{{ vote.display_name }}: <strong>{{ vote.card_value }}</strong></span
+          >
+        }
+      </div>
+    }
+  </section>
+
+  @if (spectators().length) {
+    <aside class="spectators" aria-label="Spectators">
+      <h3>
+        Spectators <span>{{ spectators().length }}</span>
+      </h3>
+      <div class="spectator-list">
+        @for (person of spectators(); track person.id) {
+          <div class="spectator" [attr.data-participant-id]="person.id">
+            <div class="avatar" [class.away]="!person.is_connected">
+              <i class="bi bi-person" aria-hidden="true"></i>
+            </div>
+            <span class="seat-name">{{ person.display_name }}</span>
+            <span class="seat-detail">
+              @if (person.id === myParticipantId()) {
+                <span>You</span>
+              }
+              @if (!person.is_connected) {
+                <span>Away</span>
+              }
+            </span>
+          </div>
+        }
+      </div>
+    </aside>
+  }
+</div>

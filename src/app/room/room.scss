@@ -1,0 +1,177 @@
+:host {
+  display: block;
+}
+.room {
+  max-width: 90rem;
+  margin: auto;
+  padding: 1.5rem 2rem 0;
+  min-height: calc(100dvh - 4rem);
+  display: flex;
+  flex-direction: column;
+}
+.room-header {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+  margin-bottom: 2rem;
+  padding-right: 3.25rem;
+}
+.room-heading {
+  min-width: 0;
+  flex: 1;
+}
+.room-heading h1 {
+  font-size: 1.5rem;
+  font-weight: 650;
+  margin: 0 0 0.4rem;
+  overflow-wrap: anywhere;
+}
+.room-heading h2 {
+  font-size: 1rem;
+  font-weight: 400;
+  color: var(--bs-secondary-color);
+  overflow-wrap: anywhere;
+  margin: 0;
+}
+.story-description {
+  margin: 0.5rem 0 0;
+  font-size: 0.85rem;
+  overflow-wrap: anywhere;
+  white-space: pre-line;
+}
+.room-status {
+  font-size: 0.75rem;
+  text-transform: capitalize;
+  padding-top: 0.5rem;
+  color: var(--bs-secondary-color);
+}
+.menu-trigger,
+.icon-button {
+  width: 2.5rem;
+  height: 2.5rem;
+  padding: 0;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+}
+app-poker-table {
+  display: block;
+  margin-bottom: 2rem;
+}
+.voting-deck {
+  margin-top: auto;
+  padding: 1.25rem 0 4.5rem;
+  border-top: 1px solid var(--bs-border-color);
+  text-align: center;
+}
+.voting-deck h3 {
+  font-size: 0.8rem;
+  color: var(--bs-secondary-color);
+  font-weight: 500;
+  margin-bottom: 1.25rem;
+}
+.controls-drawer {
+  position: fixed;
+  inset: 0 auto 0 0;
+  margin: 0;
+  height: 100dvh;
+  max-height: 100dvh;
+  width: min(26rem, 100%);
+  max-width: 100%;
+  padding: 0;
+  border: 0;
+  background: var(--bs-body-bg);
+  color: var(--bs-body-color);
+  box-shadow: 5px 0 30px rgba(0, 0, 0, 0.15);
+  &::backdrop {
+    background: rgba(0, 0, 0, 0.35);
+  }
+  &[open] {
+    animation: drawer-in 0.18s ease-out;
+  }
+}
+.drawer-content {
+  min-height: 100%;
+  padding: 1.25rem;
+}
+.drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+.drawer-header h2 {
+  font-size: 1.15rem;
+  margin: 0;
+}
+.session-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  align-items: stretch;
+}
+.session-actions .btn {
+  text-align: left;
+}
+.copy-notice {
+  min-height: 1.75rem;
+  padding-top: 0.35rem;
+}
+.moderator-controls,
+.participant-management {
+  padding-top: 1.25rem;
+  margin-top: 1rem;
+  border-top: 1px solid var(--bs-border-color);
+}
+.moderator-controls h3,
+.participant-management h3 {
+  font-size: 0.95rem;
+  margin-bottom: 1rem;
+}
+.story-queue li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--bs-border-color);
+}
+.story-title {
+  flex: 1 1 8rem;
+  overflow-wrap: anywhere;
+  font-size: 0.9rem;
+}
+.story-queue .badge {
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+@keyframes drawer-in {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+@media (max-width: 575px) {
+  .room {
+    padding: 1rem 0.75rem 0;
+  }
+  .room-header {
+    gap: 0.65rem;
+    flex-wrap: wrap;
+  }
+  .room-heading h1 {
+    font-size: 1.25rem;
+  }
+  .room-status {
+    margin-left: auto;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .controls-drawer[open] {
+    animation: none;
+  }
+}

@@ -42,6 +42,7 @@ export interface SessionPreview {
 }
 
 export interface SessionState {
+  auto_reveal: boolean;
   id: string;
   name: string;
   moderator_id: string;
