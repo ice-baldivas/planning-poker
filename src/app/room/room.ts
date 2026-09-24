@@ -1,11 +1,11 @@
-import { Component, OnInit, ViewChild, signal } from '@angular/core';
+import { Component, OnInit, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { SessionService } from '../shared/session.service';
 import { ParticipantListComponent } from '../participant-list/participant-list';
 import { CardSelectorComponent } from '../card-selector/card-selector';
-import { ResultsPanelComponent } from '../results-panel/results-panel';
-import { ConnectionStatusComponent } from '../shared/connection-status/connection-status';
+import { PokerTableComponent } from '../poker-table/poker-table';
 import { FormsModule } from '@angular/forms';
+import { GateComponent } from '../gate/gate';
 
 type GateState = 'checking' | 'reconnecting' | 'gate' | 'not-found';
 
@@ -14,16 +14,17 @@ type GateState = 'checking' | 'reconnecting' | 'gate' | 'not-found';
   imports: [
     ParticipantListComponent,
     CardSelectorComponent,
-    ResultsPanelComponent,
-    ConnectionStatusComponent,
+    PokerTableComponent,
     FormsModule,
     RouterLink,
+    GateComponent,
   ],
   templateUrl: './room.html',
   styleUrl: './room.scss',
 })
 export class RoomComponent implements OnInit {
-  @ViewChild(CardSelectorComponent) cardSelector?: CardSelectorComponent;
+  readonly menuOpen = signal(false);
+  readonly copyNotice = signal('');
 
   readonly session;
   readonly me;
@@ -40,9 +41,6 @@ export class RoomComponent implements OnInit {
   // Join gate
   readonly gateState = signal<GateState>('checking');
   readonly gateSessionName = signal<string | null>(null);
-  gateDisplayName = '';
-  gateAnonymous = false;
-  gateRole: 'team_member' | 'observer' = 'team_member';
 
   private sessionId = '';
 
@@ -82,19 +80,8 @@ export class RoomComponent implements OnInit {
     });
   }
 
-  toggleGateAnonymous(): void {
-    if (this.gateAnonymous) {
-      const suffix = 1000 + Math.floor(Math.random() * 9000);
-      this.gateDisplayName = `Anonymous #${suffix}`;
-    } else {
-      this.gateDisplayName = '';
-    }
-  }
-
-  submitGate(): void {
-    const name = this.gateDisplayName.trim();
-    if (!name) return;
-    this.sessionService.joinSession(this.sessionId, name, this.gateRole);
+  onGateJoin(payload: { displayName: string; role: 'team_member' | 'observer' }): void {
+    this.sessionService.joinSession(this.sessionId, payload.displayName, payload.role);
   }
 
   onCardPicked(card: string): void {
@@ -106,7 +93,6 @@ export class RoomComponent implements OnInit {
   }
 
   reset(): void {
-    this.cardSelector?.reset();
     this.sessionService.resetRound();
   }
 
@@ -118,7 +104,6 @@ export class RoomComponent implements OnInit {
   }
 
   setActive(story_id: string): void {
-    this.cardSelector?.reset();
     this.sessionService.setActiveStory(story_id);
   }
 
@@ -130,14 +115,37 @@ export class RoomComponent implements OnInit {
     this.finalEstimate = '';
   }
 
-  copyCode(): void {
-    const code = this.session()?.id;
-    if (code) navigator.clipboard.writeText(code);
+  openMenu(dialog: HTMLDialogElement): void {
+    dialog.showModal();
+    this.menuOpen.set(true);
   }
 
-  copyLink(): void {
+  closeMenu(dialog: HTMLDialogElement): void {
+    dialog.close();
+    this.menuOpen.set(false);
+  }
+
+  onBackdropClick(event: MouseEvent, dialog: HTMLDialogElement): void {
+    if (event.target === dialog) this.closeMenu(dialog);
+  }
+
+  async copyCode(): Promise<void> {
     const code = this.session()?.id;
-    if (code) navigator.clipboard.writeText(`${location.origin}/room/${code}`);
+    if (code) await this.copy(code, 'Code copied');
+  }
+
+  async copyLink(): Promise<void> {
+    const code = this.session()?.id;
+    if (code) await this.copy(`${location.origin}/room/${code}`, 'Link copied');
+  }
+
+  private async copy(value: string, notice: string): Promise<void> {
+    try {
+      await navigator.clipboard.writeText(value);
+      this.copyNotice.set(notice);
+    } catch {
+      this.copyNotice.set('Clipboard unavailable');
+    }
   }
 
   removeParticipant(participant_id: string): void {

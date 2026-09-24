@@ -8,5 +8,6 @@ import { RoundResult } from '../shared/types';
   styleUrl: './results-panel.scss',
 })
 export class ResultsPanelComponent {
+  summaryOnly = input(false);
   result = input.required<RoundResult>();
 }

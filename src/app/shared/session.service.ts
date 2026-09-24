@@ -24,6 +24,7 @@ interface StoredParticipant {
 @Injectable({ providedIn: 'root' })
 export class SessionService implements OnDestroy {
   private subscriptions: Subscription[] = [];
+  private navigateToNextSession = false;
 
   // ---------------------------------------------------------------------------
   // State signals
@@ -31,6 +32,7 @@ export class SessionService implements OnDestroy {
   readonly session = signal<SessionState | null>(null);
   readonly myParticipantId = signal<string | null>(null);
   readonly lastResult = signal<RoundResult | null>(null);
+  readonly voteRevision = signal(0);
   readonly error = signal<string | null>(null);
   /** Transient notice (e.g. "you were removed") that must survive navigation to Home. */
   readonly notice = signal<string | null>(null);
@@ -72,8 +74,17 @@ export class SessionService implements OnDestroy {
         this.myParticipantId.set(state.your_participant_id);
         this.persist({ session_id: state.id, participant_id: state.your_participant_id });
       }
-      this.session.set(state);
+      this.session.set({ ...state, auto_reveal: state.auto_reveal ?? false });
+      this.voteRevision.update((revision) => revision + 1);
       this.lastResult.set(null);
+      if (this.navigateToNextSession) {
+        this.navigateToNextSession = false;
+        this.router.navigate(['/room', state.id]);
+      }
+    });
+
+    this.sub(this.socket.on<{ enabled: boolean }>('auto_reveal_changed'), ({ enabled }) => {
+      this.session.update((session) => (session ? { ...session, auto_reveal: enabled } : session));
     });
 
     this.sub(this.socket.on<Participant>('participant_joined'), (p) => {
@@ -151,6 +162,7 @@ export class SessionService implements OnDestroy {
     });
 
     this.sub(this.socket.on<{ round_number: number }>('round_reset'), ({ round_number }) => {
+      this.voteRevision.update((revision) => revision + 1);
       this.lastResult.set(null);
       this.session.update((s) =>
         s
@@ -169,6 +181,7 @@ export class SessionService implements OnDestroy {
     });
 
     this.sub(this.socket.on<{ story_id: string }>('active_story_changed'), ({ story_id }) => {
+      this.voteRevision.update((revision) => revision + 1);
       this.session.update((s) =>
         s
           ? {
@@ -188,6 +201,8 @@ export class SessionService implements OnDestroy {
     });
 
     this.sub(this.socket.on<Story>('story_finalized'), (finalized) => {
+      this.voteRevision.update((revision) => revision + 1);
+      this.lastResult.set(null);
       this.session.update((s) =>
         s
           ? {
@@ -221,6 +236,7 @@ export class SessionService implements OnDestroy {
     });
 
     this.sub(this.socket.on<{ code: string; message: string }>('error'), (err) => {
+      this.navigateToNextSession = false;
       this.error.set(err.message);
     });
   }
@@ -235,9 +251,9 @@ export class SessionService implements OnDestroy {
     session_mode: SessionMode = 'stories',
   ): void {
     this.error.set(null);
+    this.navigateToNextSession = true;
     this.socket.connect();
     this.socket.emit('create_session', { name, display_name, voting_scale_id, session_mode });
-    this.waitForSession();
   }
 
   joinSession(
@@ -246,11 +262,11 @@ export class SessionService implements OnDestroy {
     role: 'team_member' | 'observer' = 'team_member',
   ): void {
     this.error.set(null);
+    this.navigateToNextSession = true;
     this.socket.connect();
     const stored = this.getStored();
     const participant_id = stored?.session_id === session_id ? stored.participant_id : undefined;
     this.socket.emit('join_session', { session_id, display_name, role, participant_id });
-    this.waitForSession();
   }
 
   castVote(card_value: string): void {
@@ -259,6 +275,10 @@ export class SessionService implements OnDestroy {
 
   revealVotes(): void {
     this.socket.emit('reveal_votes');
+  }
+
+  setAutoReveal(enabled: boolean): void {
+    this.socket.emit('set_auto_reveal', { enabled });
   }
 
   resetRound(): void {
@@ -309,18 +329,12 @@ export class SessionService implements OnDestroy {
   // Helpers
   // ---------------------------------------------------------------------------
   private clearSessionState(): void {
+    this.navigateToNextSession = false;
     this.session.set(null);
     this.myParticipantId.set(null);
     this.lastResult.set(null);
     this.error.set(null);
     sessionStorage.removeItem(STORAGE_KEY);
-  }
-
-  private waitForSession(): void {
-    const sub = this.socket.on<SessionState>('session_state').subscribe((state) => {
-      this.router.navigate(['/room', state.id]);
-      sub.unsubscribe();
-    });
   }
 
   private sub<T>(obs: Observable<T>, handler: (v: T) => void): void {

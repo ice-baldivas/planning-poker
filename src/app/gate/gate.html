@@ -1,0 +1,80 @@
+<div class="container py-5 min-vh-100 d-flex flex-column justify-content-center">
+  <div class="row justify-content-center">
+    <div class="col-12 col-sm-10 col-md-7 col-lg-5">
+      <h2 class="text-center mb-1">{{ sessionName() }}</h2>
+      <p class="text-center text-muted mb-4">
+        You've been invited to join this planning poker session.
+      </p>
+
+      @if (error()) {
+        <div class="alert alert-danger" role="alert">{{ error() }}</div>
+      }
+
+      <form (ngSubmit)="submit()">
+        <div class="mb-3">
+          <input
+            id="gateDisplayName"
+            type="text"
+            class="form-control text-center"
+            [(ngModel)]="displayName"
+            name="gateDisplayName"
+            placeholder="Your name"
+            [disabled]="anonymous"
+            maxlength="100"
+            required
+          />
+        </div>
+        <div class="mb-3 form-check">
+          <input
+            class="form-check-input"
+            type="checkbox"
+            id="gateAnonymous"
+            [(ngModel)]="anonymous"
+            name="gateAnonymous"
+            (change)="toggleAnonymous()"
+          />
+          <label class="form-check-label" for="gateAnonymous">Join anonymously</label>
+        </div>
+        <fieldset class="mb-4">
+          <legend class="form-label">Join as</legend>
+          <div class="form-check d-flex align-items-center gap-2">
+            <input
+              class="form-check-input"
+              type="radio"
+              id="roleParticipant"
+              name="gateRole"
+              value="team_member"
+              [(ngModel)]="role"
+            />
+            <label class="form-check-label flex-grow-1" for="roleParticipant">
+              <strong>Participant</strong> — can vote
+            </label>
+            <app-info-toggle [description]="participantDescription" label="About Participant" />
+          </div>
+          <div class="form-check d-flex align-items-center gap-2">
+            <input
+              class="form-check-input"
+              type="radio"
+              id="roleSpectator"
+              name="gateRole"
+              value="observer"
+              [(ngModel)]="role"
+            />
+            <label class="form-check-label flex-grow-1" for="roleSpectator">
+              <strong>Spectator</strong> — observe only, no voting
+            </label>
+            <app-info-toggle [description]="spectatorDescription" label="About Spectator" />
+          </div>
+        </fieldset>
+        <button
+          type="submit"
+          class="btn btn-primary w-100"
+          [disabled]="!displayName.trim() || isConnecting()"
+        >
+          Join Session
+        </button>
+        <app-connection-status />
+      </form>
+    </div>
+  </div>
+</div>

@@ -34,27 +34,27 @@ Frontend and backend developers building or extending this application. May also
 
 ## 2. Definitions
 
-| Term | Definition |
-|---|---|
-| **Session** | A named virtual room in which a Planning Poker game takes place. Identified by a unique Session ID. |
-| **Room** | Synonym for Session in this document. |
-| **Moderator** | The session facilitator. Has exclusive control over story management, vote reveal, and round reset. One per session. |
-| **Team Member** | A participant who casts votes. Zero or more per session. |
-| **Observer** | A participant who can see the session but cannot vote. Zero or more per session. |
-| **Story** | A user story or task item presented to the team for estimation. Has a title and optional description. |
-| **Voting Round** | A discrete estimation event for one Story. Consists of card selection, reveal, and optional replay. |
-| **Card** | A discrete estimation value that a Team Member selects during a Voting Round. |
-| **Voting Scale** | The ordered set of Card values available in a session (e.g., Fibonacci). |
-| **Vote** | A single Team Member's selected Card for the current Voting Round. |
-| **Consensus** | A state where all Team Members have selected the same Card value. |
-| **Planning Poker** | An Agile estimation technique where team members simultaneously reveal their estimates to avoid anchoring bias. |
-| **Anchoring Bias** | The cognitive bias where an initial value disproportionately influences subsequent estimates. |
-| **Session Mode** | A configuration choice made at session creation that determines whether the session uses a story queue (Story Mode) or free-form rounds (Free Round Mode). Immutable after creation. |
-| **Story Mode** | A session mode in which the Moderator manages a queue of Stories and each Voting Round is associated with a specific Story. |
-| **Free Round Mode** | A session mode in which Voting Rounds are independent of Stories. The Moderator starts, reveals, and resets rounds freely without creating or managing Stories. |
-| **Round Number** | A sequential integer (starting at 1) that identifies the current Voting Round in Free Round Mode. Incremented each time the round is reset. |
-| **WebSocket** | A full-duplex communication protocol over a single TCP connection used for real-time updates. |
-| **SPA** | Single-Page Application — an application that loads a single HTML page and dynamically updates content. |
+| Term                | Definition                                                                                                                                                                           |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Session**         | A named virtual room in which a Planning Poker game takes place. Identified by a unique Session ID.                                                                                  |
+| **Room**            | Synonym for Session in this document.                                                                                                                                                |
+| **Moderator**       | The session facilitator. Has exclusive control over story management, vote reveal, and round reset. One per session.                                                                 |
+| **Team Member**     | A participant who casts votes. Zero or more per session.                                                                                                                             |
+| **Observer**        | A participant who can see the session but cannot vote. Zero or more per session.                                                                                                     |
+| **Story**           | A user story or task item presented to the team for estimation. Has a title and optional description.                                                                                |
+| **Voting Round**    | A discrete estimation event for one Story. Consists of card selection, reveal, and optional replay.                                                                                  |
+| **Card**            | A discrete estimation value that a Team Member selects during a Voting Round.                                                                                                        |
+| **Voting Scale**    | The ordered set of Card values available in a session (e.g., Fibonacci).                                                                                                             |
+| **Vote**            | A single Team Member's selected Card for the current Voting Round.                                                                                                                   |
+| **Consensus**       | A state where all Team Members have selected the same Card value.                                                                                                                    |
+| **Planning Poker**  | An Agile estimation technique where team members simultaneously reveal their estimates to avoid anchoring bias.                                                                      |
+| **Anchoring Bias**  | The cognitive bias where an initial value disproportionately influences subsequent estimates.                                                                                        |
+| **Session Mode**    | A configuration choice made at session creation that determines whether the session uses a story queue (Story Mode) or free-form rounds (Free Round Mode). Immutable after creation. |
+| **Story Mode**      | A session mode in which the Moderator manages a queue of Stories and each Voting Round is associated with a specific Story.                                                          |
+| **Free Round Mode** | A session mode in which Voting Rounds are independent of Stories. The Moderator starts, reveals, and resets rounds freely without creating or managing Stories.                      |
+| **Round Number**    | A sequential integer (starting at 1) that identifies the current Voting Round in Free Round Mode. Incremented each time the round is reset.                                          |
+| **WebSocket**       | A full-duplex communication protocol over a single TCP connection used for real-time updates.                                                                                        |
+| **SPA**             | Single-Page Application — an application that loads a single HTML page and dynamically updates content.                                                                              |
 
 ---
 
@@ -67,7 +67,7 @@ Frontend and backend developers building or extending this application. May also
 - **REQ-003**: The application shall allow any user with a valid Session URL to join the session as a Team Member or Observer.
 - **REQ-004**: Team Members shall be able to select exactly one Card per active Voting Round.
 - **REQ-005**: A Team Member shall be able to change their Card selection before the votes are revealed.
-- **REQ-006**: All votes shall be hidden from all participants until the Moderator reveals them.
+- **REQ-006**: Other participants' vote values shall remain hidden until manual reveal or server-authorized auto-reveal. A voter may see their own selected card in their deck.
 - **REQ-007**: The Moderator shall be able to reveal all votes simultaneously for the active Voting Round.
 - **REQ-008**: Upon reveal, the application shall display each Team Member's vote alongside their name.
 - **REQ-009**: The application shall display summary statistics after vote reveal: whether consensus was reached.
@@ -85,6 +85,19 @@ Frontend and backend developers building or extending this application. May also
 - **REQ-021**: In Free Round Mode, the story queue, story management controls (add story, set active story, finalize story), and story-related UI shall not be rendered.
 - **REQ-022**: The session mode shall be immutable after the session is created; it cannot be changed mid-session.
 - **REQ-023**: In Free Round Mode, the session shall track a sequential round number (starting at 1) that increments each time the round is reset, providing context for participants.
+- **REQ-024**: The room shall display a rounded rectangular poker table with Moderator and Team Member profile circles in shared join order. A server-accepted vote turns that circle green with a check and places a face-down card beside its seat. Reveal displays card values; non-voters are labelled "No vote".
+- **REQ-025**: The Moderator may enable session-wide auto-reveal, off by default. It persists across rounds, stories, reconnects and moderator transfers. While voting, the server reveals when every seated non-observer (including the Moderator and disconnected participants) has voted, with at least one eligible voter. Enabling an already-complete round reveals immediately.
+- **REQ-026**: Auto-reveal completion shall be rechecked after votes, enabling, participant removal and pruning. Leave Session continues to disconnect rather than remove a seat. Disconnected non-voters block until manual reveal, moderator removal or existing 15-minute pruning. Observers do not count. The final required vote ends voting immediately.
+- **REQ-027**: Joining or refreshing a revealed round shall restore its public result snapshot via a requester-only `votes_revealed` event after `session_state`. Vote values and snapshots shall never appear in `SessionState`. Reset, story activation and finalization invalidate the snapshot.
+
+### Room Presentation
+
+- Header: session name, with active story title or `Round N` beneath it. Story descriptions remain visible; no active story shows the waiting state.
+- Table: theme-aware surface, stable profile/card dimensions, names and You/Moderator/Away indicators. All viewers share the same participant order; reconnect retains the seat. Consensus appears centrally on desktop, above seats on narrow screens.
+- Deck: reuse existing selectable cards and their hover/selection animations below the table. Moderator and Team Members see it, disabled outside voting; Observers never see it. Remote round/story transitions clear local selections.
+- Spectators: profile circles in a right-hand rail on desktop, a wrapping strip below the table on phones. Spectators can see public results.
+- Controls: a left modal drawer holds Code/copy code, Copy Link and Leave Session for everyone. Only the Moderator sees Reveal, Next/Reset, story controls, participant removal and the auto-reveal switch. The drawer supports keyboard focus containment, Escape and focus restoration.
+- Responsive behavior: seats extend along the table's long edges, with vertical growth for larger groups rather than a new participant limit. Names wrap. Dark/light themes and reduced motion remain supported. A removed participant's already-revealed vote remains in a named result summary without restoring their seat.
 
 ### Security Requirements
 
@@ -125,17 +138,18 @@ Frontend and backend developers building or extending this application. May also
 
 ```typescript
 interface Session {
-  id: string;             // Cryptographically random UUID
-  name: string;           // Human-readable session name
+  id: string; // Cryptographically random UUID
+  name: string; // Human-readable session name
   moderator_id: string;
   voting_scale: VotingScale;
-  session_mode: 'stories' | 'free';  // Set at creation; immutable thereafter
+  session_mode: 'stories' | 'free'; // Set at creation; immutable thereafter
+  auto_reveal: boolean; // Moderator-controlled; defaults to false
   status: 'waiting' | 'voting' | 'revealed';
-  current_story_id: string | null;   // Always null in Free Round Mode
-  round_number: number;              // Increments on reset; always 1 at session start
-  stories: Story[];                  // Always empty in Free Round Mode
+  current_story_id: string | null; // Always null in Free Round Mode
+  round_number: number; // Increments on reset; always 1 at session start
+  stories: Story[]; // Always empty in Free Round Mode
   participants: Participant[];
-  created_at: string;     // ISO 8601
+  created_at: string; // ISO 8601
 }
 ```
 
@@ -143,11 +157,11 @@ interface Session {
 
 ```typescript
 interface Participant {
-  id: string;             // UUID assigned on join
+  id: string; // UUID assigned on join
   display_name: string;
   role: 'moderator' | 'team_member' | 'observer';
   is_connected: boolean;
-  has_voted: boolean;     // True when a vote has been cast; value is hidden until reveal
+  has_voted: boolean; // True when a vote has been cast; value is hidden until reveal
 }
 ```
 
@@ -159,7 +173,7 @@ interface Story {
   title: string;
   description?: string;
   status: 'pending' | 'active' | 'estimated';
-  final_estimate?: string;   // Null until Moderator finalizes
+  final_estimate?: string; // Null until Moderator finalizes
 }
 ```
 
@@ -168,10 +182,10 @@ interface Story {
 ```typescript
 interface Vote {
   participant_id: string;
-  story_id: string | null;  // Null in Free Round Mode
-  round_number: number;     // Always set; used to scope votes to the current round
-  card_value: string;    // e.g., "5", "13", "?", "☕"
-  submitted_at: string;  // ISO 8601
+  story_id: string | null; // Null in Free Round Mode
+  round_number: number; // Always set; used to scope votes to the current round
+  card_value: string; // e.g., "5", "13", "?", "☕"
+  submitted_at: string; // ISO 8601
 }
 ```
 
@@ -183,20 +197,20 @@ type VotingScaleId = 'fibonacci' | 'tshirt' | 'custom';
 interface VotingScale {
   id: VotingScaleId;
   name: string;
-  cards: string[];  // Ordered array of card values
+  cards: string[]; // Ordered array of card values
 }
 
 // Predefined scales
 const FIBONACCI_SCALE: VotingScale = {
   id: 'fibonacci',
   name: 'Fibonacci',
-  cards: ['1', '2', '3', '5', '8', '13', '21', '?', '∞', '☕']
+  cards: ['1', '2', '3', '5', '8', '13', '21', '?', '∞', '☕'],
 };
 
 const TSHIRT_SCALE: VotingScale = {
   id: 'tshirt',
   name: 'T-Shirt Sizes',
-  cards: ['XS', 'S', 'M', 'L', 'XL', 'XXL', '?']
+  cards: ['XS', 'S', 'M', 'L', 'XL', 'XXL', '?'],
 };
 ```
 
@@ -204,10 +218,10 @@ const TSHIRT_SCALE: VotingScale = {
 
 ```typescript
 interface RoundResult {
-  story_id: string | null;  // Null in Free Round Mode
+  story_id: string | null; // Null in Free Round Mode
   round_number: number;
   votes: { participant_id: string; display_name: string; card_value: string }[];
-  average: number | null;   // Null if non-numeric cards were cast
+  average: number | null; // Null if non-numeric cards were cast
   median: number | null;
   consensus: boolean;
   consensus_value: string | null;
@@ -220,43 +234,45 @@ All events are JSON-encoded. The `type` field identifies the event.
 
 #### Client → Server Events
 
-| Event Type | Payload | Description |
-|---|---|---|
-| `join_session` | `{ session_id, display_name, role }` | Join an existing session |
-| `create_session` | `{ name, voting_scale_id, session_mode, display_name }` | Create a new session |
-| `add_story` | `{ session_id, title, description? }` | Moderator adds a story to the queue (Story Mode only) |
-| `set_active_story` | `{ session_id, story_id }` | Moderator sets the active story (Story Mode only) |
-| `cast_vote` | `{ session_id, story_id?, card_value }` | Team Member casts a vote (`story_id` omitted in Free Round Mode) |
-| `reveal_votes` | `{ session_id }` | Moderator reveals all votes |
-| `reset_round` | `{ session_id }` | Moderator clears all votes for current story |
-| `finalize_story` | `{ session_id, story_id, final_estimate }` | Moderator finalizes a story estimate |
-| `transfer_sm` | `{ session_id, new_sm_id }` | Moderator transfers their role |
+| Event Type         | Payload                                                 | Description                                                                  |
+| ------------------ | ------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| `join_session`     | `{ session_id, display_name, role }`                    | Join an existing session                                                     |
+| `create_session`   | `{ name, voting_scale_id, session_mode, display_name }` | Create a new session                                                         |
+| `add_story`        | `{ session_id, title, description? }`                   | Moderator adds a story to the queue (Story Mode only)                        |
+| `set_active_story` | `{ session_id, story_id }`                              | Moderator sets the active story (Story Mode only)                            |
+| `cast_vote`        | `{ session_id, story_id?, card_value }`                 | Team Member casts a vote (`story_id` omitted in Free Round Mode)             |
+| `reveal_votes`     | `{ session_id }`                                        | Moderator reveals all votes                                                  |
+| `set_auto_reveal`  | `{ enabled: boolean }`                                  | Moderator changes the session-wide setting; session resolved from the socket |
+| `reset_round`      | `{ session_id }`                                        | Moderator clears all votes for current story                                 |
+| `finalize_story`   | `{ session_id, story_id, final_estimate }`              | Moderator finalizes a story estimate                                         |
+| `transfer_sm`      | `{ session_id, new_sm_id }`                             | Moderator transfers their role                                               |
 
 #### Server → Client Events
 
-| Event Type | Payload | Description |
-|---|---|---|
-| `session_state` | `Session` | Full session state (sent on join and reconnect) |
-| `participant_joined` | `Participant` | A new participant has joined |
-| `participant_left` | `{ participant_id }` | A participant disconnected |
-| `participant_reconnected` | `{ participant_id }` | A participant reconnected |
-| `vote_cast` | `{ participant_id }` | A vote was cast (value hidden) |
-| `votes_revealed` | `RoundResult` | Votes are now revealed |
-| `round_reset` | `{ round_number }` | Votes cleared; new round number broadcast to all participants |
-| `story_added` | `Story` | A new story was added to the queue (Story Mode only) |
-| `active_story_changed` | `{ story_id }` | A different story is now active (Story Mode only) |
-| `story_finalized` | `Story` | A story received a final estimate (Story Mode only) |
-| `sm_transferred` | `{ new_sm_id }` | Moderator role transferred |
-| `error` | `{ code, message }` | An error occurred |
+| Event Type                | Payload                | Description                                                   |
+| ------------------------- | ---------------------- | ------------------------------------------------------------- |
+| `session_state`           | `Session`              | Full session state (sent on join and reconnect)               |
+| `participant_joined`      | `Participant`          | A new participant has joined                                  |
+| `participant_left`        | `{ participant_id }`   | A participant disconnected                                    |
+| `participant_reconnected` | `{ participant_id }`   | A participant reconnected                                     |
+| `vote_cast`               | `{ participant_id }`   | A vote was cast (value hidden)                                |
+| `votes_revealed`          | `RoundResult`          | Votes are now revealed                                        |
+| `auto_reveal_changed`     | `{ enabled: boolean }` | Confirmed session-wide auto-reveal setting                    |
+| `round_reset`             | `{ round_number }`     | Votes cleared; new round number broadcast to all participants |
+| `story_added`             | `Story`                | A new story was added to the queue (Story Mode only)          |
+| `active_story_changed`    | `{ story_id }`         | A different story is now active (Story Mode only)             |
+| `story_finalized`         | `Story`                | A story received a final estimate (Story Mode only)           |
+| `sm_transferred`          | `{ new_sm_id }`        | Moderator role transferred                                    |
+| `error`                   | `{ code, message }`    | An error occurred                                             |
 
 ### 4.3 REST API Endpoints (Minimal)
 
 These endpoints support initial session setup where a WebSocket handshake requires an HTTP exchange.
 
-| Method | Path | Description |
-|---|---|---|
-| `POST` | `/api/sessions` | Create a new session; accepts `{ name, voting_scale_id, session_mode, display_name }`; returns `{ session_id, join_url }` |
-| `GET` | `/api/sessions/:id` | Returns public session metadata (name, scale, session_mode, participant count) |
+| Method | Path                | Description                                                                                                               |
+| ------ | ------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `POST` | `/api/sessions`     | Create a new session; accepts `{ name, voting_scale_id, session_mode, display_name }`; returns `{ session_id, join_url }` |
+| `GET`  | `/api/sessions/:id` | Returns public session metadata (name, scale, session_mode, participant count)                                            |
 
 ---
 
@@ -273,16 +289,20 @@ These endpoints support initial session setup where a WebSocket handshake requir
 - **AC-009**: Non-numeric card selections (?, ∞, ☕) shall be excluded from average and median calculations; consensus detection shall still function with mixed or non-numeric cards.
 - **AC-010**: Given a participant joins as an Observer, then the card selector is not rendered for that participant, and they are excluded from vote status tracking.
 - **AC-011**: Given a user is creating a session, when the session creation form is displayed, then a radio button control allows the user to select either Story Mode or Free Round Mode before creating the session.
-- **AC-012**: Given a session is created in Free Round Mode, when the room is viewed by any participant, then no story queue, add-story form, set-active-story control, or finalize-story control is rendered; only the card selector, participant list, results panel, and round controls (reveal, reset) are shown.
+- **AC-012**: Given a session is created in Free Round Mode, no story controls are rendered. All roles see the table and public results, voters see their deck, and the Moderator has reveal/reset controls in the drawer.
 - **AC-013**: Given a session is in Free Round Mode and votes are revealed, when the Moderator resets the round, then the round number increments by one and all participants see the updated round number with a fresh voting state.
 - **AC-014**: Given a session is created in Story Mode, then Free Round Mode controls (bare round number) are not shown and the full story queue workflow applies as per existing acceptance criteria.
+- **AC-015**: With auto-reveal enabled, a disconnected seated non-voter prevents automatic reveal. Removing the final missing voter reveals the remaining submitted votes; an observer-only session never auto-reveals.
+- **AC-016**: A late join or refresh after reveal receives the original public result, even if a voter was subsequently removed. Before reveal, no result values are sent.
+- **AC-017**: At 320px through desktop widths, names and cards do not overlap, the spectator rail adapts, and all controls remain keyboard-accessible. Larger groups may require vertical scrolling.
 
 ---
 
 ## 6. Test Automation Strategy
 
 - **Test Levels**: Unit (Angular services and components), Integration (WebSocket event handling), End-to-End (multi-user session flows).
-- **Frameworks**: Jasmine/Karma (unit), Angular Testing Library (component), Playwright or Cypress (E2E).
+- **Frameworks**: Vitest with Angular TestBed/jsdom (frontend), Node's built-in `node:test` against compiled CommonJS output (backend), Playwright for browser verification.
+- **Commands**: Frontend `npm test -- --watch=false` and `npm run build`; backend `npm test` (includes TypeScript build).
 - **Test Data Management**: Tests create ephemeral in-memory sessions; no external state required.
 - **CI/CD Integration**: All unit and integration tests run on every pull request; E2E tests run on merge to main branch.
 - **Coverage Requirements**: Minimum 80% line coverage for Angular services; component tests cover all user-visible state transitions.
@@ -298,7 +318,7 @@ These endpoints support initial session setup where a WebSocket handshake requir
 
 ### Simultaneous Reveal
 
-Votes are hidden until the Moderator explicitly reveals them to eliminate anchoring bias. If votes were visible as cast, early voters would influence later voters, defeating the purpose of independent estimation.
+Votes are hidden until the Moderator explicitly reveals them or the server completes a Moderator-enabled auto-reveal. If votes were visible as cast, early voters would influence later voters, defeating the purpose of independent estimation.
 
 ### Ephemeral Sessions
 
@@ -384,18 +404,22 @@ This application requires a backend server. A frontend-only architecture is not 
 
 ### Edge Cases
 
-| Scenario | Expected Behavior |
-|---|---|
-| Moderator casts a vote | Moderator may optionally vote as a Team Member; if so, their vote is treated like any other. |
-| Only one Team Member in session | Reveal is available immediately; consensus is always true. |
-| All participants voted with `?` | Average and median are null; consensus is true with value `?`. |
-| Moderator disconnects mid-round | A countdown timer of 60 seconds begins; if Moderator does not reconnect, Moderator role is transferred to the longest-connected Team Member. |
-| Session URL accessed after all participants have left | A new participant can still join; the session state is preserved while the server holds it in memory. |
-| Participant joins during vote reveal state | They join and immediately see the revealed votes. |
-| Story queue is empty and Moderator clicks "next" | The application enters a "waiting for stories" state; voting is disabled until a story is added. |
+| Scenario                                                     | Expected Behavior                                                                                                                                             |
+| ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Moderator casts a vote                                       | Moderator may optionally vote as a Team Member; if so, their vote is treated like any other.                                                                  |
+| Only one Team Member in session                              | Reveal is available immediately; consensus is always true.                                                                                                    |
+| All participants voted with `?`                              | Average and median are null; consensus is true with value `?`.                                                                                                |
+| Moderator disconnects mid-round                              | A countdown timer of 60 seconds begins; if Moderator does not reconnect, Moderator role is transferred to the longest-connected Team Member.                  |
+| Session URL accessed after all participants have left        | A new participant can still join; the session state is preserved while the server holds it in memory.                                                         |
+| Participant joins during vote reveal state                   | They join and immediately see the revealed votes.                                                                                                             |
+| Story queue is empty and Moderator clicks "next"             | The application enters a "waiting for stories" state; voting is disabled until a story is added.                                                              |
 | Session is in Free Round Mode and Moderator resets the round | Round number increments; all votes are cleared; all participants can select a new card. Round number is broadcast to all connected clients via `round_reset`. |
-| Participant joins a Free Round Mode session mid-round | They receive full session state including the current `round_number` and existing vote statuses; they may cast a vote for the current round. |
-| Participant joins a Free Round Mode session during reveal | They join and immediately see the revealed votes and current `round_number`. |
+| Participant joins a Free Round Mode session mid-round        | They receive full session state including the current `round_number` and existing vote statuses; they may cast a vote for the current round.                  |
+| Participant joins a Free Round Mode session during reveal    | They join and immediately see the revealed votes and current `round_number`.                                                                                  |
+| Auto-reveal is enabled after all seated voters voted         | Reveal immediately; preserve the setting for subsequent rounds.                                                                                               |
+| A disconnected non-voter remains seated                      | Continue waiting for their vote, moderator removal, pruning, or manual reveal.                                                                                |
+| A new voter joins before automatic reveal                    | Include that voter in the completion requirement; an Observer does not block.                                                                                 |
+| A voted participant is removed before reveal                 | Remove that vote before checking completion. After reveal, preserve the published round snapshot.                                                             |
 
 ---
 

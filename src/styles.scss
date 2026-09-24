@@ -1,3 +1,18 @@
 /* You can add global styles to this file, and also import other style files */
 
 @import 'bootstrap/scss/bootstrap';
+@import 'bootstrap-icons/font/bootstrap-icons';
+
+body:has(app-room .room) .theme-toggle {
+  position: absolute;
+  top: 1.5rem;
+  right: 2rem;
+  bottom: auto;
+}
+
+@media (max-width: 575px) {
+  body:has(app-room .room) .theme-toggle {
+    top: 1rem;
+    right: 0.75rem;
+  }
+}

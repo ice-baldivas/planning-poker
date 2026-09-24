@@ -4,10 +4,12 @@ import { SessionService } from '../shared/session.service';
 import { SocketService } from '../shared/socket.service';
 import { SessionMode, VotingScaleId } from '../shared/types';
 import { ConnectionStatusComponent } from '../shared/connection-status/connection-status';
+import { InfoToggleComponent } from '../shared/info-toggle/info-toggle';
+import { CodeInputComponent } from '../shared/code-input/code-input';
 
 @Component({
   selector: 'app-home',
-  imports: [FormsModule, ConnectionStatusComponent],
+  imports: [FormsModule, ConnectionStatusComponent, InfoToggleComponent, CodeInputComponent],
   templateUrl: './home.html',
   styleUrl: './home.scss',
 })
@@ -19,6 +21,12 @@ export class HomeComponent {
   createDisplayName = '';
   selectedScale: VotingScaleId = 'fibonacci';
   selectedMode: SessionMode = 'free';
+  readonly fibonacciDescription =
+    'Numbers spaced further apart at higher values (1, 2, 3, 5, 8, 13, 21...) to reflect increasing uncertainty for larger estimates.';
+  readonly tshirtDescription =
+    'Relative sizing from XS to XXL is good for quick, rough estimates without numeric precision.';
+  readonly freeRoundsDescription = 'Start, reveal, and reset rounds without creating stories.';
+  readonly storiesDescription = 'Manage a backlog of stories; each round is linked to a story.';
 
   // Join form
   sessionCode = '';
